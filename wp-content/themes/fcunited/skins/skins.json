@@ -1,0 +1,17 @@
+{
+    "default": {
+        "title": "Default",
+        "description": "",
+        "version": "1.0.4",
+        "demo_url": "//fc-united.axiomthemes.com/"
+    },
+    "golf": {
+        "title": "Golf",
+        "version": "1.0.7",
+        "demo_url": "//golf.fc-united.axiomthemes.com/",
+        "uploaded": "2022-05-17",
+        "updated": "2025-05-09",
+        "checked": "2025-05-09 07:36:02",
+        "update_started": 1746776163
+    }
+}

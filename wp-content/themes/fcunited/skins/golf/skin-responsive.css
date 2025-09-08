@@ -1,0 +1,608 @@
+/* Skin-specific responsive styles
+---------------------------------- */
+@media (max-width: 1679px) {
+  .sc_layouts_row_type_normal .custom_input_bg .search_wrap .search_field {
+    width: 12em !important;
+  }
+}
+@media (max-width: 1439px) {
+  .elementor-widget-progress .elementor-title {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  .price_info_title {
+    border-left: none;
+    padding: 25px 30px;
+  }
+  .sc_price_item_info {
+    padding: 1.1em 1.7em 2.5em;
+  }
+  .sc_price_item_details ul {
+    letter-spacing: 0;
+  }
+  .trx_addons_audio_player {
+    padding: 3em 30px 2.9em;
+  }
+  .trx_addons_audio_player .audio_info + .audio_embed,
+  .trx_addons_audio_player .audio_info + .audio_frame {
+    margin-top: 2.5em;
+  }
+  .price_info_title .sc_price_item_title {
+    letter-spacing: 0;
+  }
+  blockquote p {
+    font-size: 20px;
+    line-height: 1.1em;
+  }
+  blockquote:before {
+    font-size: 90px;
+    top: 59px;
+    left: 40px;
+  }
+  .wpcf7 textarea {
+    height: 10em;
+  }
+  .price_info_title .sc_price_item_price {
+    min-height: auto !important;
+  }
+  .woocommerce ul.products li.product .woocommerce-loop-category__title,
+  .woocommerce ul.products li.product .woocommerce-loop-product__title,
+  .woocommerce ul.products li.product h3 {
+    font-size: 20px;
+  }
+  .woocommerce ul.products li.product .price, .woocommerce-page ul.products li.product .price {
+    font-size: 20px;
+  }
+  .single-product .related {
+    margin-top: 0;
+  }
+  .sc_recent_news_style_news-excerpt .post_item .post_title {
+    font-size: 24px;
+  }
+}
+@media (max-width: 1279px) {
+  html {
+    font-size: 15px;
+  }
+  .sc_layouts_row_type_normal .search_wrap .search_field {
+    width: 13em !important;
+    padding: 0 30px 0 12px !important;
+  }
+  .price_info_title {
+    padding: 20px 23px 20px 15px;
+  }
+  .widget_nav_menu ul li, .widget_recent_entries ul li, .widget_meta ul li, .widget_pages ul li, .widget_archive ul li, .widget_product_categories ul li, .widget_categories ul li {
+    padding: 1px 0;
+    padding-left: 1.2em;
+    letter-spacing: 0;
+  }
+  .widget.widget_categories .widget_title,
+  .widget.widget_recent_comments .widget_title {
+    margin-bottom: 20px;
+  }
+  h6 {
+    font-size: 16px;
+  }
+  .widget_nav_menu ul, .widget_recent_entries ul, .widget_meta ul, .widget_pages ul, .widget_archive ul, .widget_product_categories ul, .widget_categories ul {
+    font-size: 1em;
+  }
+  .widget_area .post_item .post_title, aside .post_item .post_title {
+    margin: 0 0 9px 0;
+  }
+  .copyright-text {
+    font-size: 12px;
+  }
+  h3 {
+    font-size: 2.2em;
+  }
+  h4 {
+    font-size: 1.9em;
+  }
+  .trx_addons_dropcap {
+    font-size: 46px;
+  }
+  h2, .sc_item_title {
+    letter-spacing: 0;
+  }
+  .post_featured.with_thumb .mejs-controls .mejs-button.mejs-playpause-button > button,
+  .with_cover .mejs-controls .mejs-button.mejs-playpause-button > button {
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+  }
+  .sc_skills_counter .sc_skills_item_title {
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+  .sc_skills_counter .sc_skills_total {
+    font-size: 36px;
+  }
+  .sc_skills_pie.sc_skills_compact_off .sc_skills_total {
+    font-size: 30px;
+  }
+  .sc_skills_counter .sc_skills_icon {
+    font-size: 5em;
+  }
+  .author_info .author_avatar {
+    width: 80px;
+    height: 80px;
+    line-height: 80px;
+    top: 30px;
+    left: 30px;
+  }
+  .post_item_single .post_content > .post_meta_single .share_meta_label, .post_item_single .post_content .post_tags .post_meta_label {
+    font-size: 18px;
+  }
+  .slider_container.slider_controls_side .slider_controls_wrap > .slider_prev, .slider_outer_controls_side .slider_controls_wrap > .slider_prev {
+    margin-left: 10px !important;
+  }
+  .slider_container.slider_controls_side .slider_next, .slider_outer_controls_side .slider_controls_wrap > .slider_next {
+    margin-right: 10px !important;
+  }
+  .sc_slider_controls .slider_controls_wrap > a,
+  .slider_container.slider_controls_side .slider_controls_wrap > a,
+  .slider_outer_controls_outside .slider_controls_wrap > a,
+  .slider_outer_controls_side .slider_controls_wrap > a,
+  .slider_outer_controls_top .slider_controls_wrap > a,
+  .slider_outer_controls_bottom .slider_controls_wrap > a {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+  }
+  .swiper-button-next, .swiper-button-prev {
+    margin-top: -20px;
+  }
+  .menu_footer_nav_area > ul > li, .footer_wrap .sc_layouts_menu > ul > li {
+    font-size: 13px;
+  }
+  .widget.woocommerce.widget_price_filter .widget_title,
+  .widget.widget_product_categories .widget_title {
+    margin-bottom: 20px;
+  }
+  .woocommerce .widget_price_filter .price_label {
+    top: -4em;
+  }
+  .woocommerce div.product .product_title {
+    font-size: 38px;
+  }
+  .woocommerce div.product p.price,
+  .woocommerce div.product span.price {
+    font-size: 22px;
+  }
+  .woocommerce-tabs.wc-tabs-wrapper {
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+  .woocommerce div.product .woocommerce-tabs ul.tabs li a, .woocommerce #content div.product .woocommerce-tabs ul.tabs li a, .woocommerce-page div.product .woocommerce-tabs ul.tabs li a, .woocommerce-page #content div.product .woocommerce-tabs ul.tabs li a {
+    font-size: 18px;
+    padding: 0.8em 1.5em;
+  }
+  .tribe-events .tribe-events-calendar-month__header-column {
+    padding-bottom: 23px;
+    padding-top: 22px;
+  }
+  .tribe-common--breakpoint-medium.tribe-events .tribe-events-calendar-month__day {
+    min-height: 167px;
+  }
+  .tribe-common--breakpoint-medium.tribe-events .tribe-events-calendar-month__day-date {
+    padding: 10px 18px;
+  }
+  .tribe-events-schedule h2,
+  .single-tribe_events .tribe-events-meta-group .tribe-events-single-section-title {
+    font-size: 1.9em;
+  }
+  div.esg-filter-wrapper .esg-filterbutton > span {
+    font-size: 16px;
+    line-height: 18px;
+  }
+  .sp-event-blocks .logo-even {
+    margin-right: 10px !important;
+  }
+  .sp-event-blocks .logo-odd {
+    margin-left: 10px !important;
+  }
+  .sc_blogger.sc_blogger_line .sc_blogger_item_content .sc_blogger_item_title {
+    font-size: 24px;
+    line-height: 30px;
+  }
+  .sc_blogger_default .sc_blogger_item_title {
+    font-size: 24px;
+  }
+  .sc_blogger .format-audio .post_featured.with_thumb .post_audio, .sc_blogger .sc_layouts_blog_item_featured .post_featured.with_thumb .post_audio {
+    top: auto;
+  }
+  .sc_item_filters_header {
+    padding: 20px 20px !important;
+  }
+  .extra-table .sc_table table td,
+  .extra-table .sc_table table tr:first-child th, .extra-table .sc_table table tr:first-child td {
+    padding: 1em 1.2em;
+  }
+  .extra-table table tr td:first-child h5 {
+    font-size: 18px;
+    line-height: 20px;
+    margin-bottom: 8px;
+  }
+  .extra-table table tr td h4 {
+    font-size: 20px;
+    line-height: 26px;
+  }
+  .large-title .sc_item_title {
+    font-size: 60px;
+    line-height: 1.2em;
+    letter-spacing: 0;
+  }
+  .double_btn.rev-btn {
+    padding: 20px !important;
+  }
+  .tribe-events .tribe-events-c-events-bar__search-container {
+    border-radius: 0;
+  }
+}
+@media (max-width: 1023px) {
+  .sp-event-blocks .logo-odd {
+    margin-left: 0 !important;
+  }
+  .single-sp_team .elementor-widget-container .elementor-image > img {
+    width: 100%;
+  }
+  .sc_testimonials_item {
+    padding: 25px 20px 20px 53px;
+  }
+  .sc_testimonials [class*=column] .sc_testimonials_item_content {
+    line-height: 20px;
+  }
+  h3 {
+    font-size: 2em;
+  }
+  span.amount > .decimals {
+    font-size: 1em;
+    margin-left: 0;
+  }
+  .woocommerce div.product .product_title {
+    font-size: 30px;
+  }
+  .qty-label {
+    font-size: 16px;
+  }
+  .woocommerce .product .compare, .tinv-wishlist.tinvwl-after-add-to-cart .tinvwl_add_to_wishlist_button, .woocommerce div.product form.cart .single_add_to_cart_button,
+  .woocommerce div.product form.cart div.quantity, .woocommerce-page div.product form.cart div.quantity, .woocommerce .shop_table.cart div.quantity, .woocommerce-page .shop_table.cart div.quantity {
+    height: 54px;
+  }
+  .woocommerce div.product .woocommerce-tabs ul.tabs {
+    margin: 0 0 1em;
+  }
+  .woocommerce div.product .woocommerce-tabs ul.tabs li a,
+  .woocommerce #content div.product .woocommerce-tabs ul.tabs li a,
+  .woocommerce-page div.product .woocommerce-tabs ul.tabs li a,
+  .woocommerce-page #content div.product .woocommerce-tabs ul.tabs li a {
+    font-size: 16px;
+  }
+  .woocommerce .related ul.products li.product .price,
+  .woocommerce .related ul.products li.product .woocommerce-loop-product__title {
+    font-size: 16px;
+  }
+  .tribe-events .tribe-events-header {
+    margin: 0;
+  }
+  .tribe-common .tribe-common-l-container {
+    padding: 0;
+  }
+  .tribe-events .tribe-events-calendar-month__header-column {
+    padding-bottom: 13px;
+    padding-top: 12px;
+  }
+  .tribe-events-calendar-list,
+  .tribe-events-calendar-day {
+    margin-top: 30px !important;
+  }
+  .tribe-events-c-top-bar__datepicker-time {
+    font-size: 18px !important;
+  }
+  .tribe-events .tribe-events-c-nav__list-item--today .tribe-events-c-nav__today.tribe-common-b2 {
+    font-weight: 400;
+    text-transform: uppercase;
+    font-size: 12px !important;
+    letter-spacing: 1px;
+  }
+  .tribe-events .tribe-events-c-nav__list-item--today {
+    margin-top: 1em;
+  }
+  .tribe-events-calendar-day__event-header .tribe-events-calendar-day__event-title,
+  .tribe-events-calendar-list__event-header .tribe-events-calendar-list__event-title {
+    font-size: 20px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0;
+  }
+  .tribe-events .tribe-events-c-nav__list-item--today {
+    margin-top: 0;
+  }
+  .single-tribe_events .tribe-events-schedule {
+    padding: 0;
+  }
+  .esg-filters .esg-filter-wrapper {
+    margin-bottom: 0 !important;
+  }
+  .sp-template-event-blocks .sp-event-results * {
+    font-size: 30px;
+  }
+  .sc_blogger.sc_blogger_line .sc_blogger_item_content .sc_blogger_item_title {
+    font-size: 20px;
+  }
+  .extra-countdown .sp-countdown-wrapper .countdown.sp-countdown time span {
+    font-size: 30px !important;
+  }
+  form button, input[type=button], input[type=reset], input[type=submit],
+  .theme_button, .post_item .more-link, .gallery_preview_show .post_readmore,
+  .fcunited_tabs .fcunited_tabs_titles li a, #buddypress .comment-reply-link,
+  #buddypress .generic-button a, #buddypress a.button, #buddypress button,
+  #buddypress input[type=button], #buddypress input[type=reset],
+  #buddypress input[type=submit], #buddypress ul.button-nav li a,
+  #buddypress div.activity-meta a, a.bp-title-button,
+  body #booked-profile-page input[type=submit],
+  body #booked-profile-page button, body .booked-list-view input[type=submit],
+  body .booked-list-view button, body table.booked-calendar input[type=submit],
+  body table.booked-calendar button, body .booked-modal input[type=submit],
+  body .booked-modal button, .edd_download_purchase_form .button,
+  #edd-purchase-button, .edd-submit.button, .widget_edd_cart_widget .edd_checkout a,
+  .sc_button, .sc_layouts_row .sc_button, .sc_form button,
+  .tourmaster-tour-search-wrap input.tourmaster-tour-search-submit[type=submit],
+  #tribe-bar-form .tribe-bar-submit input[type=submit], #tribe-bar-form button,
+  #tribe-bar-form a, #tribe-bar-form input, #tribe-bar-form .tribe-bar-views-toggle,
+  #tribe-bar-views .tribe-bar-views-list .tribe-bar-views-option, .tribe-bar-mini #tribe-bar-views .tribe-bar-views-list .tribe-bar-views-option,
+  #tribe-events .tribe-events-button, .tribe-events-button, .tribe-events-cal-links a,
+  .tribe-events-read-more, #tribe-events-footer ~ a.tribe-events-ical.tribe-events-button,
+  .woocommerce .button, .woocommerce-page .button, .woocommerce a.button,
+  .woocommerce button.button, .woocommerce input.button .woocommerce #respond input#submit,
+  .woocommerce input[type=button], .woocommerce-page input[type=button],
+  .woocommerce input[type=submit], .woocommerce-page input[type=submit],
+  .woocommerce .woocommerce-message .button, .woocommerce ul.products li.product .button,
+  .woocommerce div.product form.cart .button, .woocommerce #review_form #respond p.form-submit input[type=submit],
+  .woocommerce-page #review_form #respond p.form-submit input[type=submit], .woocommerce table.my_account_orders .order-actions .button,
+  .woocommerce table.cart td.actions .button, #add_payment_method .wc-proceed-to-checkout a.checkout-button,
+  .woocommerce-cart .wc-proceed-to-checkout a.checkout-button, .woocommerce-checkout .wc-proceed-to-checkout a.checkout-button,
+  .woocommerce #respond input#submit.disabled, .woocommerce #respond input#submit:disabled,
+  .woocommerce #respond input#submit[disabled]:disabled, .woocommerce a.button.disabled,
+  .woocommerce a.button:disabled, .woocommerce a.button[disabled]:disabled,
+  .woocommerce button.button.disabled, .woocommerce button.button:disabled,
+  .woocommerce button.button[disabled]:disabled, .woocommerce input.button.disabled,
+  .woocommerce input.button:disabled, .woocommerce input.button[disabled]:disabled,
+  .yith-woocompare-widget a.clear-all, .sp-view-all-link > a {
+    padding: 1em 1.3em;
+  }
+  .sc_blogger.sc_blogger_line .post_featured {
+    margin-bottom: 0 !important;
+  }
+  .sc_layouts_row_type_normal .sc_layouts_cart_items_short {
+    width: 17px;
+    height: 17px;
+    line-height: 16px;
+    top: 3px;
+    right: 2px;
+  }
+  .elementor-shortcode .woocommerce ul.products li.product .post_data,
+  .elementor-shortcode .woocommerce-page ul.products li.product .post_data {
+    padding: 3px 20px 2em;
+  }
+  .woocommerce ul.products li.product .price,
+  .woocommerce-page ul.products li.product .price {
+    font-size: 16px;
+  }
+  .sc_promo.sc_promo_size_small .sc_promo_text_inner {
+    padding: 4.8em 2em;
+  }
+  .sc_promo.sc_promo_size_small .sc_promo_title {
+    font-size: 40px;
+  }
+  .large-title .sc_item_title {
+    font-size: 50px;
+    line-height: 1.1em;
+  }
+  .sp-template-event-blocks .sp-event-date {
+    margin-top: 10px !important;
+  }
+}
+@media (max-width: 767px) {
+  .sc_table table tr:first-child th, .sc_table table tr:first-child td {
+    padding: 1rem;
+  }
+  blockquote:before {
+    font-size: 86px;
+    top: 42px;
+    left: 23px;
+  }
+  blockquote p {
+    font-size: 17px;
+    line-height: 1.2em;
+  }
+  .author_info .author_avatar {
+    top: 0;
+    left: 0;
+  }
+  .woocommerce ul.products li.product .woocommerce-loop-category__title, .woocommerce ul.products li.product .woocommerce-loop-product__title, .woocommerce ul.products li.product h3,
+  .woocommerce ul.products li.product .price, .woocommerce-page ul.products li.product .price {
+    font-size: 17px;
+  }
+  .woocommerce .shop_mode_thumbs ul.products li.product .price,
+  .woocommerce-page .shop_mode_thumbs ul.products li.product .price {
+    margin: 5px auto;
+  }
+  .woocommerce .woocommerce-ordering, .woocommerce-page .woocommerce-ordering {
+    float: right;
+  }
+  .woocommerce .woocommerce-ordering select {
+    min-width: 10em;
+  }
+  .woocommerce .widget_price_filter .price_label {
+    top: -3.5em;
+  }
+  .woocommerce div.product .woocommerce-tabs ul.tabs li a, .woocommerce #content div.product .woocommerce-tabs ul.tabs li a, .woocommerce-page div.product .woocommerce-tabs ul.tabs li a, .woocommerce-page #content div.product .woocommerce-tabs ul.tabs li a {
+    font-size: 14px;
+    padding: 0.8em 1em;
+  }
+  .woocommerce div.product .product_title {
+    font-size: 26px;
+    letter-spacing: 0;
+  }
+  .woocommerce .product_meta span,
+  .woocommerce .product_meta span span,
+  .woocommerce .product_meta a {
+    font-size: 14px;
+  }
+  .single-product ul.products li.product .post_data .post_header h3,
+  .single-product ul.products li.product .post_data .post_header .woocommerce-loop-product__title {
+    font-size: 18px;
+  }
+  .tribe-events-calendar-day__event-header .tribe-events-calendar-day__event-title,
+  .tribe-events-calendar-list__event-header .tribe-events-calendar-list__event-title {
+    font-size: 18px !important;
+    font-weight: 400 !important;
+    line-height: 1.2em;
+    letter-spacing: 0;
+  }
+  .tribe-events-c-nav__list-item.tribe-events-c-nav__list-item--prev .tribe-events-c-nav__prev,
+  .tribe-events-c-nav__list-item.tribe-events-c-nav__list-item--next .tribe-events-c-nav__next {
+    padding: 1.38em 1.5em;
+  }
+  .tribe-events-schedule h2,
+  .single-tribe_events .tribe-events-meta-group .tribe-events-single-section-title {
+    font-size: 1.4em;
+  }
+  h4 {
+    font-size: 1.6em;
+  }
+  .sc_item_filters + .trx_addons_columns_wrap.columns_padding_bottom > [class*=trx_addons_column-] {
+    padding-bottom: 35px;
+  }
+  .extra-table table tr td h4 {
+    font-size: 14px;
+    line-height: 17px;
+  }
+  .sc_promo.sc_promo_image_position_left .sc_promo_image {
+    border-radius: 0;
+  }
+  .trx-button.sr7-btn,
+  .trx-button.rev-btn {
+    margin-top: 0 !important;
+  }
+  .double_btn.sr7-btn,
+  .double_btn.rev-btn {
+    padding: 12px !important;
+  }
+  .sc_push_medium_negative, .sc_push_y_medium_negative {
+    margin-top: -2em !important;
+  }
+  .sc_promo.sc_promo_size_small .sc_promo_text_inner {
+    padding: 2em !important;
+  }
+  .woocommerce table.cart td.actions .coupon .input-text {
+    width: 100%;
+    margin: 0 0 10px 0;
+  }
+  .woocommerce-page table.cart td.actions .coupon + .button,
+  .woocommerce-page table.cart td.actions .coupon .input-text + .button,
+  .woocommerce-page table.cart td.actions .coupon {
+    float: none !important;
+  }
+  .woocommerce-page table.cart td.actions .coupon + .button,
+  .woocommerce-page table.cart td.actions .coupon .input-text + .button {
+    width: 100%;
+  }
+  .white_bg:before {
+    right: -100vw;
+  }
+  .dark_bg:before,
+  .green_bg:before {
+    left: -100vw;
+  }
+  .single-post .nav-links-single .nav-links .nav-previous {
+    padding: 25px 20px 23px 0;
+  }
+  .single-post .nav-links-single .nav-links .nav-next {
+    padding: 25px 0 23px 0;
+  }
+}
+@media (max-width: 479px) {
+  h3 {
+    font-size: 1.8em;
+    line-height: 1.2em;
+  }
+  .sc_item_title {
+    line-height: 1.2em;
+  }
+  .sc_table table tr:first-child th, .sc_table table tr:first-child td {
+    padding: 0.4rem;
+    letter-spacing: 1px;
+  }
+  .trx_addons_video_player.with_cover .video_hover,
+  .format-video .post_featured.with_thumb .post_video_hover,
+  .sc_layouts_blog_item_featured .post_featured.with_thumb .post_video_hover {
+    width: 56px;
+    height: 56px;
+    line-height: 66px;
+    margin: -28px 0 0 -28px !important;
+  }
+  .sc_price_item_subtitle + .sc_price_item_link,
+  .sc_price_item_title + .sc_price_item_link,
+  .sc_price_item_description + .sc_price_item_link,
+  .sc_price_item_details + .sc_price_item_link {
+    margin-top: 1.2em;
+  }
+  .sc_item_subtitle {
+    font-size: 12px;
+    line-height: 1.1em;
+    letter-spacing: 1.7px;
+  }
+  .related_wrap .post_title {
+    font-size: 22px;
+    line-height: 28px;
+  }
+  .widget_calendar th {
+    font-size: 14px !important;
+  }
+  .woocommerce .fcunited_shop_mode_buttons, .woocommerce-page .fcunited_shop_mode_buttons {
+    float: none;
+  }
+  .woocommerce .woocommerce-ordering, .woocommerce-page .woocommerce-ordering {
+    float: none;
+    margin-top: 10px;
+  }
+  .sc_layouts_widgets .widget .widget_title, .widget .widget_title, .widget .widgettitle {
+    font-size: 18px;
+  }
+  .woocommerce div.product .product_title {
+    font-size: 24px;
+  }
+  .woocommerce div.product p.price,
+  .woocommerce div.product span.price {
+    font-size: 20px;
+  }
+  .tribe-events-c-top-bar__datepicker-time {
+    font-size: 16px !important;
+  }
+  .trx_addons_dropcap {
+    margin: 6px 17px 0 0;
+    width: 65px;
+    height: 65px;
+    line-height: 63px;
+  }
+  .trx-button.sr7-btn,
+  .trx-button.rev-btn {
+    padding: 10px 16px !important;
+    margin-top: 0 !important;
+  }
+  .sc_push_medium_negative, .sc_push_y_medium_negative {
+    margin-top: 4em !important;
+  }
+  .large-title .sc_item_title {
+    font-size: 36px;
+  }
+  .woocommerce table.cart td.actions .button {
+    padding: 0 0.5em !important;
+  }
+  p > a[rel=magnific]:has(> img.alignleft),
+  p > a[rel=magnific]:has(> img.alignright) {
+    margin: 0.6em auto !important;
+  }
+}
+/*# sourceMappingURL=skin-responsive.css.map */

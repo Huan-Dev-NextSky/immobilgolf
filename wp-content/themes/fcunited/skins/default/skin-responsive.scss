@@ -1,0 +1,14 @@
+@import "../../css/_mixins.scss";
+@import "../../css/_theme-vars.scss";
+
+@media #{$media_xs} {
+	/* Theme Common styles */
+
+	p > a[rel=magnific]:has(> img.alignleft),
+	p > a[rel=magnific]:has(> img.alignright){
+		margin: .6em auto!important;
+	}
+}
+
+/* Skin-specific responsive styles
+---------------------------------- */
