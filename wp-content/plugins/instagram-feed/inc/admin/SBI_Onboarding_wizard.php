@@ -206,13 +206,13 @@ class SBI_Onboarding_wizard extends SBI_Feed_Builder
 					'id' => 'success-page',
 					'template' => SBI_BUILDER_DIR . 'templates/onboarding/success-page.php',
 					'heading' => __('Awesome. You are all set up!', 'instagram-feed'),
-					'description' => __('Here\'s an overview of everything that is setup', 'instagram-feed'),
+					'description' => __('Here\'s an overview of everything that is set up', 'instagram-feed'),
 					'upgradeContent' => [
 						'heading' => __('Upgrade to unlock hashtag feeds, tagged feeds, a popup lightbox and more', 'instagram-feed'),
 						'description' => __('To unlock these features and much more, upgrade to Pro and enter your license key below.', 'instagram-feed'),
 						'button' => [
 							'text' => __('Upgrade to Instagram Feed Pro', 'instagram-feed'),
-							'link' => 'https://smashballoon.com/pricing/instagram-feed/?license_key&upgrade=true&utm_campaign=instagram-free&utm_source=setup&utm_medium=upgrade-license'
+							'link' => 'https://smashballoon.com/instagram-feed/instagram-lite-upgrade/?license_key&upgrade=true&utm_campaign=instagram-free&utm_source=setup&utm_medium=upgrade-license'
 						],
 						'upgradeCouppon' => 'Upgrade today and save 50% on a Pro License! (auto-applied at checkout)',
 						'banner' => SBI_BUILDER_URL . 'assets/img/success-banner.jpg',
@@ -418,6 +418,8 @@ class SBI_Onboarding_wizard extends SBI_Feed_Builder
 				}
 				return false;
 		}
+
+		return false; // phpcs:ignore Generic.PHP.UpperCaseConstant
 	}
 
 	/**
@@ -470,6 +472,12 @@ class SBI_Onboarding_wizard extends SBI_Feed_Builder
 		$reviews_plugin = self::get_smash_reviews_plugin();
 		if ($reviews_plugin !== false) {
 			array_push($features_list, $reviews_plugin);
+		}
+
+		// WPChat Plugin
+		$wpchat_plugin = self::get_smash_wpchat_plugin();
+		if ($wpchat_plugin !== false) {
+			array_push($features_list, $wpchat_plugin);
 		}
 
 		return $features_list;
@@ -639,6 +647,58 @@ class SBI_Onboarding_wizard extends SBI_Feed_Builder
 	}
 
 	/**
+	 * Return WPChat Plugin if not Installed
+	 *
+	 * @return array|false
+	 *
+	 * @since 6.X
+	 */
+	public static function get_smash_wpchat_plugin()
+	{
+		$installed_plugins = get_plugins();
+		$min_php = '8.0';
+
+		$is_wpchat_installed = false;
+		$wpchat_plugin = 'smashballoon-wpchat-livechat-customer-support/wp-chat.php';
+		if (isset($installed_plugins['wp-chat-pro/wp-chat-pro.php'])) {
+			$is_wpchat_installed = true;
+			$wpchat_plugin = 'wp-chat-pro/wp-chat-pro.php';
+		} elseif (isset($installed_plugins['smashballoon-wpchat-livechat-customer-support/wp-chat.php'])) {
+			$is_wpchat_installed = true;
+		}
+
+		if (version_compare(PHP_VERSION, $min_php, '<')) {
+			$is_wpchat_installed = true;
+		}
+
+		if ($is_wpchat_installed === false) {
+			return [
+				'data' => [
+					'id' => 'wpchat',
+					'type' => 'install_plugins'
+				],
+				'heading' => __('WPChat Plugin', 'instagram-feed'),
+				'description' => __('Install WPChat and connect with customers on WhatsApp, Messenger, Telegram & Instagram and more', 'instagram-feed'),
+				'color' => 'blue',
+				'active' => true,
+				'icon' => '<svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40"/><path d="M24.9043 5.62825C32.4709 5.62825 38.6048 11.7622 38.6048 19.3287C38.6048 27.0749 32.2378 33.1326 24.7466 33.0311L1.3954 34.2794L4.02646 26.2735C2.36821 24.0988 1.39563 21.3894 1.39563 18.4817C1.39563 11.3829 7.15032 5.62825 14.2491 5.62825H24.9043Z" fill="#F53C5E"/><path fill-rule="evenodd" clip-rule="evenodd" d="M15.4226 18.6218V18.7695C15.4226 20.8897 17.1414 22.6085 19.2616 22.6085C21.3819 22.6085 23.1007 20.8897 23.1007 18.7695V18.6218H26.9397V18.7695C26.9397 23.0099 23.5021 26.4475 19.2616 26.4475C15.0211 26.4475 11.5836 23.0099 11.5836 18.7695V18.6218H15.4226Z" fill="white"/></svg>',
+				'plugins' => [
+					[
+						'type' => 'wpchat',
+						'is_istalled' => $is_wpchat_installed,
+						'download_link' => $wpchat_plugin,
+						'min_php' => $min_php,
+						'icon' => SBI_PLUGIN_URL . 'admin/assets/img/wpchat-icon.svg'
+					]
+				],
+				'tooltip' => __('Enabling this feature will install WPChat plugin. WPChat by Smash Balloon helps you add live chat and customer support to your website.', 'instagram-feed'),
+
+			];
+		}
+		return false;
+	}
+
+	/**
 	 * Wizard Wrapper.
 	 *
 	 * @since 6.0
@@ -717,6 +777,18 @@ class SBI_Onboarding_wizard extends SBI_Feed_Builder
 					@SBI_Onboarding_wizard::install_single_plugin($plugin_name);
 					$this->disable_installed_plugins_redirect();
 				}
+			}
+			// SMASH-1245 — opt-in consent from onboarding success page.
+			// Storage is the dedicated consent options (NOT sb_instagram_settings),
+			// and we set $dismiss_modal=true so the post-onboarding re-prompt won't fire.
+			if (
+				isset( $single_data['type'] )
+				&& 'consent' === $single_data['type']
+				&& isset( $single_data['value'] )
+				&& true === $single_data['value'] // phpcs:ignore Generic.PHP.UpperCaseConstant
+				&& class_exists( 'SBI_Consent' )
+			) {
+				\SBI_Consent::update( true, true, true ); // phpcs:ignore Generic.PHP.UpperCaseConstant
 			}
 		}
 		update_option('sb_instagram_settings', $sbi_settings);
@@ -812,6 +884,9 @@ class SBI_Onboarding_wizard extends SBI_Feed_Builder
 			case 'reviews':
 				$plugin_download = 'https://downloads.wordpress.org/plugin/reviews-feed.zip';
 				break;
+			case 'wpchat':
+				$plugin_download = 'https://downloads.wordpress.org/plugin/smashballoon-wpchat-livechat-customer-support.zip';
+				break;
 			case 'allinoneseo':
 				$plugin_download = 'https://downloads.wordpress.org/plugin/all-in-one-seo-pack.zip';
 				break;
@@ -877,6 +952,7 @@ class SBI_Onboarding_wizard extends SBI_Feed_Builder
 			'youtube' => 'sby_plugin_do_activation_redirect',
 			'twitter' => 'ctf_plugin_do_activation_redirect',
 			'reviews' => 'sbr_plugin_do_activation_redirect',
+			'wpchat' => 'wpchat_plugin_do_activation_redirect',
 		];
 
 		if (isset($smash_list[self::$plugin_name])) {

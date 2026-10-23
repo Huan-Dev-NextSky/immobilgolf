@@ -2,8 +2,8 @@
 Contributors: dnesscarkey
 Tags: custom fonts, font manager, font uploader, typography, google fonts
 Requires at least: 4.0
-Tested up to: 6.8.1
-Stable tag: 6.3.13
+Tested up to: 7.0.4
+Stable tag: 6.4.1
 Requires PHP: 7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -169,6 +169,17 @@ Please do write us after integration and we will add it in our supported list.
 1. Screenshot #6. Assign fonts to custom elements.
 
 == Changelog ==
+
+= 6.4.1 =
+* Added font stretch (width variations) and oblique style support to font variations.
+
+= 6.4 =
+* Modernized block editor theme.json integration using the wp_theme_json_data_theme filter hook.
+* Added nonce security verification to predefined font imports to mitigate potential CSRF.
+
+= 6.3.14 =
+* Added validation for font assign section.
+* Fixed special characters issue in custom element box. 
 
 = 6.3.13 =
 * Fixed API key issue. 

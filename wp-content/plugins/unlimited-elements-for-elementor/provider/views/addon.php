@@ -1,8 +1,9 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 defined('UNLIMITED_ELEMENTS_INC') or die;
 
-class UniteCreatorAddonViewProvider extends UniteCreatorAddonView{
+class UELM_CreatorAddonViewProvider extends UELM_CreatorAddonView{
 
 	/**
 	 * add dynamic fields child keys
@@ -78,3 +79,5 @@ class UniteCreatorAddonViewProvider extends UniteCreatorAddonView{
 	
 	
 }
+
+class_alias( UELM_CreatorAddonViewProvider::class, 'UniteCreatorAddonViewProvider' );

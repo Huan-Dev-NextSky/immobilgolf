@@ -1,0 +1,138 @@
+.gm-style .gm-style-iw, 
+.gm-style .gm-style-iw {
+    width: 100% !important;
+    left: 1px !important;
+    top: 1px !important;
+}
+
+.gm-style .gm-style-iw > div, 
+.gm-style .gm-style-iw > div {
+    max-width: 224px !important;
+}
+
+.gm-style-iw >div, 
+.gm-style-iw >div >div, 
+.gm-style-iw >div, 
+.gm-style-iw >div >div {
+    overflow: visible !important;
+}
+
+.infobox {
+    background: white;
+    position:relative;
+    width:275px;
+}
+
+.infobox:after {
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-top: 12px solid white;
+    content: '';
+    height: 0;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+    -webkit-transform: translateX(-50%);
+    -moz-transform: translateX(-50%);
+    -o-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    width: 0;
+}
+
+.infoBox .infoBox {
+    border: 1px solid rgba(221, 221, 221, 0.58);
+}
+
+.infobox img {
+    max-width: 100%;
+}
+
+.infobox .title {
+    color: #545454;
+    font-size: 18px;
+    font-weight: 600;
+    font-family: 'Open Sans Light', sans-serif;
+    padding: 5px 20px;
+    padding-bottom: 0;
+}
+
+.infobox .infobox-link-btn,
+.infobox .title a {
+    color: #0f7ad5;
+}
+
+.infobox .infobox-link-btn:hover,
+.infobox .title a:hover {
+    background: #0f7ad5;
+    color: white;
+    text-decoration: none;
+}
+
+.infobox .image {
+    height: 172px;
+    overflow: hidden;
+}
+
+.infobox .image > img {
+    object-fit: cover;
+    -webkit-object-fit: cover;
+    -moz-object-fit: cover;
+    height: 100%;
+    width: 100%;
+}
+
+.infobox .content {
+    color: #696969;
+    font-size: 13px;
+    padding:  12px 20px;
+    display: table;
+    width: 100%;
+}
+
+.infobox .content > div  {
+    display: table-cell;
+    float: none;
+    vertical-align: middle;
+    padding: 0;
+    width: 50%;
+}
+.infobox .content .infobox-link-btn {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Open Sans Light', sans-serif;
+    text-transform: uppercase;
+}
+
+.infobox .infobox-footer {
+    padding: 0px 20px 10px 20px;
+    font-size: 14px;
+}
+
+.infobox .property-preview-f-left {
+    overflow: hidden;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.infobox .infobox-footer span {
+    display: inline-block;
+    margin-right: 7px;
+}
+
+.infobox .infobox-footer span i {
+    margin-right: 5px;
+}
+
+.infobox .infobox-footer span:not(:last-child) {
+    margin-right: 7px;
+}
+
+.infoBox > img {
+    position: absolute !important;
+    right: 5px;
+    top: 5px;
+    cursor: pointer;
+    z-index: 5;
+}

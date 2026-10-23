@@ -6,6 +6,8 @@
  * @copyright Copyright (c) 2016 UniteCMS
  * @license http://www.gnu.org/licenses/gpl-2.0.html GNU/GPLv2 or later
 */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 
 //no direct accees
 defined ('UNLIMITED_ELEMENTS_INC') or die ('restricted aceess');
@@ -250,10 +252,7 @@ class UniteCreatorWooIntegrate{
 			$arrProduct["woo_sale_price_from"] = null;
 			$arrProduct["woo_sale_price_to"] = null;
 		}else{
-			
-			$regularPriceFrom = $this->modifyPrice($regularPriceFrom, $objProduct);
-			$regularPriceTo = $this->modifyPrice($regularPriceTo, $objProduct);
-			
+						
 			$arrProduct["woo_regular_price_from"] = $regularPriceFrom;
 			$arrProduct["woo_regular_price_to"] = $regularPriceTo;
 		}
@@ -725,25 +724,26 @@ class UniteCreatorWooIntegrate{
     	$regularPrice = UniteFunctionsUC::getVal($arrData, "regular_price");
     	$price = UniteFunctionsUC::getVal($arrData, "price");
     	
-    	$price = apply_filters("woocommerce_product_get_price", $price, $objInfo);
-    	$salePrice = apply_filters("woocommerce_product_get_sale_price", $salePrice, $objInfo);
-    	$regularPrice = apply_filters("woocommerce_product_get_regular_price", $regularPrice, $objInfo);
+    	$priceNoTax = wc_get_price_excluding_tax($objInfo);
+    	$priceWithTax = wc_get_price_including_tax($objInfo);
     	
+    	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
+    	$price = apply_filters("woocommerce_product_get_price", $price, $objInfo);
+    	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
+    	$salePrice = apply_filters("woocommerce_product_get_sale_price", $salePrice, $objInfo);
+    	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
+    	$regularPrice = apply_filters("woocommerce_product_get_regular_price", $regularPrice, $objInfo);
     	
     	$salePrice = $this->modifyPrice($salePrice, $objInfo);
     	$regularPrice = $this->modifyPrice($regularPrice, $objInfo);
     	$price = $this->modifyPrice($price, $objInfo);
     	
-    	$priceNoTax = wc_get_price_excluding_tax($objInfo);
-    	$priceWithTax = wc_get_price_including_tax($objInfo);
-    	    	
     	if(empty($regularPrice) && !empty($price))
     		$regularPrice = $price;
     	
     	$arrData["regular_price"] = $regularPrice;
     	$arrData["price"] = $price;
     	$arrData["sale_price"] = $salePrice;
-    	
     	
     	$arrProduct = array();
     	
@@ -779,7 +779,7 @@ class UniteCreatorWooIntegrate{
     		$arrPrices = $objInfo->get_variation_prices();
     		
     		$arrProduct = $this->addPricesFromTo($arrProduct, $arrPrices, $objInfo);
-    		    		
+    		
     		$arrProduct["woo_price"] = $arrProduct["woo_price_from"];
     		$arrProduct["woo_price_id"] = $arrProduct["woo_price_from_id"];
     		
@@ -815,6 +815,7 @@ class UniteCreatorWooIntegrate{
 		
     	//put add to cart link
     	$arrProduct = $this->addAddToCartData($arrProduct, $productID, $productSku);
+    	
     	
     	    	
     	return($arrProduct);
@@ -991,11 +992,17 @@ class UniteCreatorWooIntegrate{
 				$variationName = 'attribute_' . $value['taxonomy'];
 				$variationValue = $value['terms'][0];
 
-				$aliasVar = "pm_var_{$index}";
-				$variationJoinConditions[] = "INNER JOIN {$wpdb->postmeta} {$aliasVar} 
-                    ON p.ID = {$aliasVar}.post_id 
-                    AND {$aliasVar}.meta_key = '{$variationName}' 
-                    AND {$aliasVar}.meta_value = '{$variationValue}'";
+				$aliasVar = "pm_var_" . (int) $index;
+				// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $aliasVar is pm_var_ plus an integer. Column values use %s placeholders.
+				$variationJoinConditions[] = $wpdb->prepare(
+					"INNER JOIN {$wpdb->postmeta} {$aliasVar}
+                    ON p.ID = {$aliasVar}.post_id
+                    AND {$aliasVar}.meta_key = %s
+                    AND {$aliasVar}.meta_value = %s",
+					$variationName,
+					$variationValue
+				);
+				// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			}
 		}
 
@@ -1005,12 +1012,12 @@ class UniteCreatorWooIntegrate{
                 ON p.ID = pm_stock.post_id 
                 AND pm_stock.meta_key = '_stock_status' 
                 AND pm_stock.meta_value = 'instock'";
-
+			
 			$clauses['join'] .= "\n" . implode("\n", $variationJoinConditions);
 		}
 		
 		remove_filter('posts_clauses', array($this, 'excludeOutOfStockVariationProducts'), 10, 2);
-
+		
 		return $clauses;
 	}
 
@@ -1139,6 +1146,7 @@ class UniteCreatorWooIntegrate{
 		
 		//run advanced product labels
 		if(class_exists("BeRocket_products_label")){
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 			do_action('berocket_apl_set_label', true, $productID);
 		}
 
@@ -1608,8 +1616,11 @@ class UniteCreatorWooIntegrate{
 		
 		foreach($arrCartItems as $cart_item_key=>$cart_item){
 			
+		    // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 		    $wc_product      = apply_filters( 'woocommerce_cart_item_product', $cart_item['data'], $cart_item, $cart_item_key );
+		    // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 		    $wc_product_id   = apply_filters( 'woocommerce_cart_item_product_id', $cart_item['product_id'], $cart_item, $cart_item_key );
+		    // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 		    $wc_product_link = apply_filters( 'woocommerce_cart_item_permalink', $wc_product->is_visible() ? $wc_product->get_permalink( $cart_item ) : '', $cart_item, $cart_item_key );
 		    //$item_thumbnail  = $wc_product->get_image();
 		    $imageID  = $wc_product->get_image_id();
@@ -1624,14 +1635,18 @@ class UniteCreatorWooIntegrate{
 		    
 		    
 		    $item_name       = $wc_product->get_name();
+		    // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 		    $product_link    = apply_filters( 'woocommerce_cart_item_permalink', $wc_product->is_visible() ? $wc_product->get_permalink( $cart_item ) : '', $cart_item, $cart_item_key );
 			
 		    $price = WC()->cart->get_product_price( $wc_product );
 		    
 			$quantity = $cart_item['quantity'];
 			
-			$priceHtml = wc_price( $cart_item['line_subtotal']+$cart_item['line_subtotal_tax'] );
-
+			$lineTotal = $cart_item['line_total'] + $cart_item['line_tax']; // cart-adjusted
+			$unitTotal = $quantity > 0 ? $lineTotal / $quantity : 0;
+			$priceHtml  = wc_price( $unitTotal );
+			
+			
 			$imageHTML = "";
 			
 			if(!empty($urlImage))
@@ -1640,7 +1655,11 @@ class UniteCreatorWooIntegrate{
 			
 			//extra html hooks
 			
+			$extraHTML_item = apply_filters("uelm_woocart_item_extra_html", "", $wc_product_id);
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 			$extraHTML_item = apply_filters("ue_woocart_item_extra_html", "", $wc_product_id);
+			$extraHTML_itemContent = apply_filters("uelm_woocart_item_content_extra_html", "" , $wc_product_id);
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 			$extraHTML_itemContent = apply_filters("ue_woocart_item_content_extra_html", "" , $wc_product_id);
 			
 $htmlItem = "
@@ -1685,6 +1704,7 @@ $htmlItem = "
 		
 		if(empty(WC()->cart)){
 			$subtotal = 0;
+			$subtotalWithTax = 0;
 		}else{
 			
 			$arrTotals = WC()->cart->get_totals();
@@ -1698,6 +1718,8 @@ $htmlItem = "
 		
 		$subtotalHTML = wc_price($subtotalWithTax);
 		
+		$subtotalNoTax = wc_price($subtotal);
+		
 		$strNum = "";
 		
 		if($isSecond)
@@ -1707,6 +1729,7 @@ $htmlItem = "
 <div class=\"ue-mini-cart-totals-holder{$strNum}\">
 	
 	<div class=\"uc-minicart-totals__subtotal\">{$subtotalHTML}</div>
+	<div class=\"uc-minicart-totals__subtotal-notax\" style='display:none'>{$subtotalNoTax}</div>
 
 </div>";
 	

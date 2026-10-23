@@ -1,8 +1,9 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 defined('UNLIMITED_ELEMENTS_INC') or die;
 
-class AddonLibraryViewLayoutProvider extends AddonLibraryViewLayout{
+class UELM_AddonLibraryViewLayoutProvider extends UELM_AddonLibraryViewLayout{
 	
 	
 	/**
@@ -19,3 +20,5 @@ class AddonLibraryViewLayoutProvider extends AddonLibraryViewLayout{
 	
 	
 }
+
+class_alias( UELM_AddonLibraryViewLayoutProvider::class, 'AddonLibraryViewLayoutProvider' );

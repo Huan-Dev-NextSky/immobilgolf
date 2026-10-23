@@ -1,0 +1,32 @@
+{
+  "name": "Immobilgolf Production",
+  "host": "89.116.114.140",
+  "protocol": "ftp",
+  "port": 21,
+  "username": "u228695287.huan",
+  "password": "YOUR_PASSWORD_HERE",
+  "remotePath": "/",
+  "uploadOnSave": true,
+  "useTempFile": false,
+  "openSsh": false,
+  "ignore": [
+    ".git",
+    ".vscode",
+    ".cursor",
+    "deploy.env",
+    "scripts/deploy.sh",
+    "node_modules",
+    "__Xold",
+    "__Xold_2025",
+    "__Xsviluppo",
+    "wp-content/uploads",
+    "wp-content/cache",
+    "portal/files",
+    "portal/application/logs"
+  ],
+  "watcher": {
+    "files": "**/*",
+    "autoUpload": false,
+    "autoDelete": false
+  }
+}

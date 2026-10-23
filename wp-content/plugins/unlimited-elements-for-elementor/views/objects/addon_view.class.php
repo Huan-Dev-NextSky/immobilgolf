@@ -14,7 +14,7 @@ if(GlobalsUC::$isProVersion){
 	require_once GlobalsUC::$pathPro."childparams_pro.class.php";
 }
 
-class UniteCreatorAddonView{
+class UELM_CreatorAddonView{
 
 	protected $objAddon;
 	protected $settingsItemOutput, $settingsJSOutput, $objAddonType, $addonType;
@@ -47,9 +47,9 @@ class UniteCreatorAddonView{
 	public function __construct(){
 
 		if(GlobalsUC::$isProVersion)
-			$this->objChildParams = new UniteCreatorChildParamsPro();
+			$this->objChildParams = new UELM_CreatorChildParamsPro();
 		else
-			$this->objChildParams = new UniteCreatorAddonViewChildParams();
+			$this->objChildParams = new UELM_CreatorAddonViewChildParams();
 
 	}
 
@@ -127,6 +127,10 @@ class UniteCreatorAddonView{
 		$settingsItem->addTextBox("items_title_field", "", "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".esc_html__("Title Field", "unlimited-elements-for-elementor"), $params);
 		$settingsItem->addControl("enable_items", "items_title_field", "show", "true");
 
+		//allow empty items
+		$settingsItem->addRadioBoolean("items_allow_empty", "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".esc_html__("Allow Empty", "unlimited-elements-for-elementor"), false);
+		$settingsItem->addControl("enable_items", "items_allow_empty", "show", "true");
+		
 
 		$settingsItem->setStoredValues($options);
 		
@@ -331,6 +335,8 @@ class UniteCreatorAddonView{
 		$filepathAddonSettings = GlobalsUC::$pathSettings."addon_fields.php";
 
 		require $filepathAddonSettings;
+
+		$generalSettings = $uelm_generalSettings;
 
 		if($this->isSVG)
 			$generalSettings = $this->modifyGeneralSettings_SVG($generalSettings);
@@ -2153,7 +2159,7 @@ class UniteCreatorAddonView{
 				</h2>
 				<p><?php echo esc_html__('Unlock Access To All Pro Blocks and Features.', "unlimited-elements-for-elementor"); ?></p>
 				<p>
-                    <a href="<?php echo GlobalsUC::$url_buy_platform?>" 
+                    <a href="<?php echo esc_url(GlobalsUC::$url_buy_platform); ?>" 
                     target="_blank" 
                     class="unite-button-primary"><?php echo esc_html__('Upgrade Now', "unlimited-elements-for-elementor"); ?></a>
                 </p>
@@ -2200,3 +2206,5 @@ class UniteCreatorAddonView{
 
 
 }
+
+class_alias( UELM_CreatorAddonView::class, 'UniteCreatorAddonView' );

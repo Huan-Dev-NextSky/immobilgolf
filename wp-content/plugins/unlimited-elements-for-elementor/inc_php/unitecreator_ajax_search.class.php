@@ -20,55 +20,95 @@ class UniteCreatorAjaxSeach{
 	private $searchMetaKey = "";
 
 	/**
-	 * set post parts where clause
+	 * limit ajax search to selected post fields
+	 * rebuild the search SQL instead of cutting pieces out of the finished statement
 	 */
-	public function setWherePostParts($where, $wp_query){
-		
-		if (in_array('all', $this->searchPostFields))
-			return ($where);
+	public function setSearchPostParts($search, $wp_query){
+
+		remove_filter("posts_search", array($this, "setSearchPostParts"), 10, 2);
+
+		if(in_array("all", $this->searchPostFields))
+			return($search);
 
 		if(empty($this->searchPostFields))
-			return($where);
-		
-		//set fields to delete
-		$arrDelete = array("post_title"=>true,"post_excerpt"=>true,"post_content"=>true);
+			return($search);
+
+		if(empty($search))
+			return($search);
+
+		global $wpdb;
+
+		$allowedFields = array("post_title", "post_excerpt", "post_content");
+		$arrFields = array();
 
 		foreach($this->searchPostFields as $field){
-			
-			unset($arrDelete[$field]);
+			if(in_array($field, $allowedFields, true) == true)
+				$arrFields[] = $field;
 		}
-		
-		//AI Help :)
-		
-		// Remove fields specified in $arrDelete
-		
-	    foreach ($arrDelete as $field => $remove) {
-	        if ($remove) {
-	            // Pattern to match the specific condition
-	            $pattern = "/\(wp_posts\.$field LIKE '[^']*'\)\s*(OR\s*)?/";
-	            $where = preg_replace($pattern, '', $where);
-	        }
-	    }
-	
-	    // Clean up unnecessary OR and extra spaces left after removal
-	    $where = preg_replace('/\s+OR\s+\)/', ')', $where);
-	    $where = preg_replace('/\(\s+OR\s+/', '(', $where);
-	
-	    $where = trim($where);		
-		
+
+		if(empty($arrFields))
+			return($search);
+
+		$queryVars = $wp_query->query_vars;
+		$arrTerms = UniteFunctionsUC::getVal($queryVars, "search_terms");
+
+		if(empty($arrTerms)){
+			$searchValue = UniteFunctionsUC::getVal($queryVars, "s");
+			if(!empty($searchValue))
+				$arrTerms = array($searchValue);
+		}
+
+		if(empty($arrTerms))
+			return($search);
+
+		$wild = empty($queryVars["exact"]) ? "%" : "";
+		$exclusionPrefix = apply_filters("uelm_wp_query_search_exclusion_prefix", "-");
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
+		$exclusionPrefix = apply_filters("wp_query_search_exclusion_prefix", "-");
+
+		$searchAnd = "";
+		$newSearch = "";
+
+		foreach($arrTerms as $term){
+
+			$exclude = false;
+			if(!empty($exclusionPrefix) && is_string($term) && strpos($term, $exclusionPrefix) === 0){
+				$exclude = true;
+				$term = substr($term, 1);
+			}
+
+			$likeOp = $exclude ? "NOT LIKE" : "LIKE";
+			$andOrOp = $exclude ? "AND" : "OR";
+			$like = $wild . $wpdb->esc_like($term) . $wild;
+
+			$arrParts = array();
+			foreach($arrFields as $field){
+				$arrParts[] = $wpdb->prepare("{$wpdb->posts}.{$field} {$likeOp} %s", $like); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $field is limited to post_title, post_excerpt, post_content. $likeOp is only LIKE or NOT LIKE. The term is a %s placeholder.
+			}
+
+			$newSearch .= $searchAnd . "(" . implode(" {$andOrOp} ", $arrParts) . ")";
+			$searchAnd = " AND ";
+		}
+
+		if(empty($newSearch))
+			return($search);
+
+		$output = " AND ({$newSearch}) ";
+
+		if(is_user_logged_in() == false)
+			$output .= " AND ({$wpdb->posts}.post_password = '') ";
+
 		if(GlobalsProviderUC::$showPostsQueryDebug == true){
-			
+
 			dmp("Mat the search for those fields: ");
 			dmp($this->searchPostFields);
-			
-			dmp($where);
+
+			dmp($output);
 		}
-	    
-		remove_filter( 'posts_where', array($this,'setWherePostParts'), 10, 2 );
-		
-		return($where);
+
+		return($output);
 	}
-	
+	 
 	/**
 	 * on posts response
 	 */
@@ -121,7 +161,7 @@ class UniteCreatorAjaxSeach{
 			}
 			
 		}
-
+		
 		if (GlobalsProviderUC::$showPostsQueryDebug == true ) {
 			
 			//print total posts
@@ -172,8 +212,9 @@ class UniteCreatorAjaxSeach{
 
 			dmp("<strong>Search By Meta Fields</strong>");
 			dmp("Query:");
-			dmp($args);
+			dmpHtml($args);
 			dmp("Found Posts: ".count($arrPostsByMeta));
+			dmp("Total Query Posts: ".(int)$query->found_posts);
 
 		}
 		
@@ -266,9 +307,10 @@ class UniteCreatorAjaxSeach{
 			dmp("Query:");
 			$strTerms = UniteFunctionsWPUC::getTermsTitlesString($arrTermsFound, true);
 			dmp($strTerms);
-			dmp($args);
+			dmpHtml($args);
 			dmp("Found Terms: ".count($arrTermsFound));
 			dmp("Found Posts: ".count($arrPostsByTerms));
+			dmp("Total Query Posts: ".(int)$query->found_posts);
 			
 		}
 
@@ -357,7 +399,7 @@ class UniteCreatorAjaxSeach{
 		}
 
 		//keys to leave
-		$arrKeys = array("uc_filter_posts_list","posts_where");
+		$arrKeys = array("uc_filter_posts_list", "posts_where", "posts_search");
 		
 		
 		$newFilters = array();
@@ -429,7 +471,7 @@ class UniteCreatorAjaxSeach{
 		
 		if(!empty($arrSearchPostFields) && in_array("all", $arrSearchPostFields) == false){
 			
-			add_filter( 'posts_where', array($this,'setWherePostParts'), 10, 2 );
+			add_filter( "posts_search", array($this, "setSearchPostParts"), 10, 2 );
 			
 			self::$customSearchEnabled = true;
 			
@@ -448,6 +490,177 @@ class UniteCreatorAjaxSeach{
 			UniteProviderFunctionsUC::addFilter("uc_filter_posts_list", array($this,"onPostsResponse"),10,3);
 		}
 		
+	}
+	
+	/**
+	 * get suggestion data for ajax search
+	 */
+	public function getSearchSuggestionData($search, $args){
+		
+		$searchToken = $this->getSuggestionToken($search);
+		
+		if(empty($searchToken))
+			return(null);
+		
+		$suggestion = $this->getSuggestionFromArgs($searchToken, $args);
+		
+		if(empty($suggestion) || $suggestion === $searchToken)
+			return(null);
+		
+		$output = array();
+		$output["original"] = $search;
+		$output["suggestion"] = $suggestion;
+		
+		return($output);
+	}
+	
+	/**
+	 * get suggestion from query args
+	 */
+	private function getSuggestionFromArgs($searchToken, $args){
+		
+		if(empty($args) || is_array($args) == false)
+			return(null);
+		
+		if(isset($args["s"]))
+			unset($args["s"]);
+		
+		if(isset($args["search"]))
+			unset($args["search"]);
+		
+		if(isset($args["paged"]))
+			unset($args["paged"]);
+		
+		if(isset($args["offset"]))
+			unset($args["offset"]);
+		
+		$args["posts_per_page"] = 50;
+		$args["no_found_rows"] = true;
+		$args["ignore_sticky_posts"] = true;
+		
+		$query = new WP_Query($args);
+		
+		if(empty($query) || empty($query->posts))
+			return(null);
+		
+		$maxDistance = $this->getSuggestionMaxDistance($searchToken);
+		$bestWord = null;
+		$bestDistance = null;
+		
+		foreach($query->posts as $post){
+			
+			$title = "";
+			
+			if(is_object($post) && isset($post->post_title)){
+				$title = $post->post_title;
+			}else{
+				$title = UniteFunctionsUC::getVal($post, "post_title");
+			}
+			
+			if(empty($title))
+				continue;
+			
+			$arrWords = $this->getSuggestionWordsFromTitle($title);
+			
+			if(empty($arrWords))
+				continue;
+			
+			foreach($arrWords as $word){
+				
+				if($word === $searchToken)
+					return(null);
+				
+				$lenDiff = abs(strlen($word) - strlen($searchToken));
+				
+				if($lenDiff > $maxDistance)
+					continue;
+				
+				$distance = levenshtein($searchToken, $word);
+				
+				if($distance === false)
+					continue;
+				
+				if($distance <= $maxDistance && ($bestDistance === null || $distance < $bestDistance)){
+					$bestDistance = $distance;
+					$bestWord = $word;
+					
+					if($bestDistance === 0)
+						break 2;
+				}
+				
+			}
+			
+		}
+		
+		return($bestWord);
+	}
+	
+	/**
+	 * get suggestion token (single word)
+	 */
+	private function getSuggestionToken($search){
+		
+		$search = trim($search);
+		
+		if(empty($search))
+			return(null);
+		
+		$search = strtolower($search);
+		$search = preg_replace("/[^a-z0-9\\s]/", " ", $search);
+		$tokens = preg_split("/\\s+/", $search, -1, PREG_SPLIT_NO_EMPTY);
+		
+		if(empty($tokens))
+			return(null);
+		
+		$token = $tokens[0];
+		
+		if(strlen($token) < 3)
+			return(null);
+		
+		return($token);
+	}
+	
+	/**
+	 * get words from title
+	 */
+	private function getSuggestionWordsFromTitle($title){
+		
+		$title = strtolower($title);
+		$title = preg_replace("/[^a-z0-9\\s]/", " ", $title);
+		$words = preg_split("/\\s+/", $title, -1, PREG_SPLIT_NO_EMPTY);
+		
+		if(empty($words))
+			return(array());
+		
+		$output = array();
+		
+		foreach($words as $word){
+			
+			if(strlen($word) < 3)
+				continue;
+			
+			$output[$word] = true;
+		}
+		
+		$output = array_keys($output);
+		
+		return($output);
+	}
+	
+	/**
+	 * get suggestion max distance
+	 */
+	private function getSuggestionMaxDistance($word){
+		
+		$length = strlen($word);
+		
+		if($length <= 4)
+			return(1);
+		
+		if($length <= 7)
+			return(2);
+		
+		return(3);
 	}
 
 }

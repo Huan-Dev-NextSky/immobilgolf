@@ -52,7 +52,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		const DEFAULT_JPG_QUALITY = 81;
 		const THUMB_WIDTH = 300;
 		const THUMB_WIDTH_LARGE = 700;
-
+		
 		const THUMB_SIZE_NORMAL = "size_normal";
 		const THUMB_SIZE_LARGE = "size_large";
 
@@ -75,7 +75,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		const URL_SUPPORT = "http://unitecms.ticksy.com";
 		const URL_DOWNLOAD_PRO = "https://users.freemius.com/login";
 		const URL_PREVIEW_WIDGETS = "https://unlimited-elements.com/";
-		const URL_RATE = "https://wordpress.org/support/plugin/unlimited-elements-for-elementor/reviews/?filter=5";
+		const URL_RATE = "https://wordpress.org/support/plugin/unlimited-elements-for-elementor/reviews/";
 		const URL_FACEBOOK = "https://facebook.com/groups/468327430642626";
 		const URL_YOUTUBE = "https://youtube.com/channel/UCNYLnevs1ewIxKQqPiat0xQ";
 
@@ -133,7 +133,6 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		public static $pathProvider;
 		public static $pathProviderViews;
 		public static $pathProviderTemplates;
-		public static $pathWPLanguages;
 		public static $pathPro;
 
 		public static $current_host;
@@ -167,6 +166,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		public static $is_admin;
 		public static $isLocal;		//if website located in localhost
 		public static $is_admin_debug_mode = false;
+		public static $isDebug = false;		//general debug for any puprose, for admin permissions only		
 		public static $isDOUBLYSupported = true;
 		public static $is_ssl;
 		public static $path_base;
@@ -196,6 +196,10 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		public static $showQueryDebugByUrl = false;
 		public static $isInsidePlugin = false;	//set in provider_admin
 		
+		public static $isSaveBuilderMode = false;	//set that inside the save builder
+		
+		public static $hideDebug = false;
+		
 		
 		/**
 		 * init globals
@@ -224,7 +228,6 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			self::$current_page_url = self::$current_host.UniteFunctionsUC::getVal($_SERVER, "REQUEST_URI");
 
 			self::$pathPluginRel = basename(self::$pathPlugin)."/";
-			self::$pathWPLanguages = self::$pathPluginRel."languages/";
 
 			self::$pathProvider = self::$pathPlugin."provider/";
 			self::$pathTemplates = self::$pathPlugin."views/templates/";
@@ -242,8 +245,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			if(defined("UC_TEST_FREE_VERSION"))
 				self::$isProVersion = false;
 
-			Global $mainFilepath;		//defined at plugin start
-			self::$pathPluginFile = $mainFilepath;
+			Global $uelm_mainFilepath;		//defined at plugin start
+			self::$pathPluginFile = $uelm_mainFilepath;
 
 			self::$pathProviderViews = self::$pathProvider."views/";
 			self::$pathProviderTemplates = self::$pathProvider."views/templates/";
@@ -307,11 +310,9 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		 * init after init action trigger
 		 */
 		public static function initAfterInitTrigger(){
-			
-			load_plugin_textdomain("unlimited-elements-for-elementor", false, GlobalsUC::$pathWPLanguages);
 
 			//init client text
-			ugelInitClientText();
+			uelm_initClientText();
 		}
 		
 		/**
@@ -331,12 +332,24 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			if($showQueryDebugByUrl == true)
 				self::$showQueryDebugByUrl = true;
 			
+			//legacy alias: enable query debug via "ucquerydebug_terms" too
+			$showQueryDebugTermsByUrl = HelperUC::hasPermissionsFromQuery("ucquerydebug_terms");
+			if($showQueryDebugTermsByUrl == true)
+				self::$showQueryDebugByUrl = true;
+			
 						
 			//test free version
 			
 			$isTestFree = HelperUC::hasPermissionsFromQuery("testfreeversion");
 			if($isTestFree == true)
 				GlobalsUC::$isProVersion = false;
+			
+			//general debug
+			$isGeneralDebug = HelperUC::hasPermissionsFromQuery("ucdebug");
+			if($isGeneralDebug == true)
+				GlobalsUC::$isDebug = true;
+
+			
 			
 		}
 

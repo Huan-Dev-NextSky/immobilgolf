@@ -140,7 +140,9 @@ class SB_Instagram_GDPR_Integrations
 			// not uncommon for the image editor to not work using it this way
 			if (!is_wp_error($image_editor)) {
 				$sbi_statuses_option['gdpr']['image_editor'] = true;
-			} else {
+			} elseif (class_exists('\InstagramFeed\Vendor\Smashballoon\Framework\Packages\Consent\ConsentManager') && \InstagramFeed\Vendor\Smashballoon\Framework\Packages\Consent\ConsentManager::is_dsc_enabled()) {
+				// External image-editor probe is consent-gated (phone-home). With
+				// consent off, the flag stays false and feeds still render.
 				$test_image = 'https://plugin.smashballoon.com/editor-test.png';
 
 				$image_editor = wp_get_image_editor($test_image);
@@ -217,7 +219,7 @@ class SB_Instagram_GDPR_Integrations
 			$errors[] = __('Tables used for storing information about resized images were not successfully created.', 'instagram-feed');
 		}
 		if (!$sbi_statuses_option['gdpr']['image_editor']) {
-			$errors[] = sprintf(__('An image editor is not available on your server. Instagram Feed is unable to create local resized images. See %1$sthis FAQ%2$s for more information', 'instagram-feed'), '<a href="https://smashballoon.com/doc/the-images-in-my-feed-are-missing-or-showing-errors/" target="_blank" rel="noopener">', '</a>');
+			$errors[] = sprintf(__('An image editor is not available on your server. Instagram Feed is unable to create local resized images. See %1$sthis FAQ%2$s for more information', 'instagram-feed'), '<a href="https://smashballoon.com/doc/the-images-in-my-feed-are-missing-or-showing-errors/?utm_campaign=instagram-free&utm_source=error-message&utm_medium=docs" target="_blank" rel="noopener">', '</a>');
 		}
 
 		if (isset($_GET['tab']) && $_GET['tab'] !== 'support') {

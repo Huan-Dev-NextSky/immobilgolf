@@ -1,0 +1,37 @@
+---
+description: Deploy changed files to production FTP server
+alwaysApply: true
+---
+
+# Deploy to Production (FTP)
+
+When the user asks to deploy, push, or upload files to the server, use the project deploy script.
+
+## Command
+
+From project root:
+
+```bash
+./scripts/deploy.sh <relative-path> [more-paths...]
+```
+
+Examples:
+
+```bash
+./scripts/deploy.sh wp-content/plugins/immobilgolf-helper/elementors/property.php
+./scripts/deploy.sh wp-content/plugins/immobilgolf-helper/
+```
+
+Dry run:
+
+```bash
+./scripts/deploy.sh --dry-run wp-content/plugins/immobilgolf-helper/
+```
+
+## Rules
+
+- Always deploy only the files or folders that were changed unless the user asks for a full sync.
+- Paths must be relative to the project root.
+- Credentials live in `deploy.env` (gitignored). Do not commit passwords.
+- Do not deploy `wp-content/uploads`, cache folders, logs, or backup folders.
+- After editing plugin files under `wp-content/plugins/immobilgolf-helper/`, offer to deploy those paths when the user wants changes on production.

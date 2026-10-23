@@ -5,8 +5,8 @@
 
 use TEC\Common\StellarWP\Assets\Config as Assets_Config;
 use Tribe\DB_Lock;
-use Tribe\Events\Views\V2;
 use Tribe\Events\Admin\Settings;
+use Tribe\Events\Views\V2;
 use Tribe\Events\Views\V2\Views\Day_View;
 use Tribe\Events\Views\V2\Views\List_View;
 use Tribe\Events\Views\V2\Views\Month_View;
@@ -40,7 +40,7 @@ if ( ! class_exists( 'Tribe__Events__Main' ) ) {
 		const POSTTYPE            = 'tribe_events';
 		const VENUE_POST_TYPE     = 'tribe_venue';
 		const ORGANIZER_POST_TYPE = 'tribe_organizer';
-		const VERSION             = '6.15.0.1';
+		const VERSION             = '6.18.0';
 
 		/**
 		 * Min Pro Addon.
@@ -77,7 +77,7 @@ if ( ! class_exists( 'Tribe__Events__Main' ) ) {
 		 *
 		 * @since 4.8
 		 */
-		protected $min_et_version = '5.26.0-dev';
+		protected $min_et_version = '5.27.0-dev';
 
 		/**
 		 * Maybe display data wrapper
@@ -374,7 +374,7 @@ if ( ! class_exists( 'Tribe__Events__Main' ) ) {
 		 *
 		 * In the past we used to parse `common/src/Tribe/Main.php` for the Common Lib version.
 		 *
-		 * @link https://github.com/moderntribe/tribe-common
+		 * @link https://github.com/the-events-calendar/tribe-common
 		 * @see  self::init_autoloading
 		 *
 		 * @return void
@@ -795,6 +795,8 @@ if ( ! class_exists( 'Tribe__Events__Main' ) ) {
 			 */
 			add_action( 'init', [ $this, 'setup_l10n_strings' ], 5 );
 			add_action( 'tribe_load_text_domains', [ $this, 'load_text_domain' ], 5 );
+			// Restore post_tag for events when WordPress re-runs create_initial_taxonomies on change_locale.
+			add_action( 'change_locale', [ $this, 'restore_event_tag_taxonomy_on_locale_change' ], 20 );
 
 			// Since TEC is active, change the base page for the Event Settings page
 			Tribe__Settings::$parent_page = 'edit.php';
@@ -2027,6 +2029,30 @@ if ( ! class_exists( 'Tribe__Events__Main' ) ) {
 		}
 
 		/**
+		 * Restores the post_tag taxonomy association for event post types after WordPress
+		 * re-runs create_initial_taxonomies on the change_locale action, which otherwise overwrites
+		 * object_type and removes tribe_events and tec_calendar_embed.
+		 *
+		 * @since 6.15.17
+		 */
+		public function restore_event_tag_taxonomy_on_locale_change(): void {
+			// Bail if post_tag taxonomy doesn't exist.
+			if ( ! taxonomy_exists( 'post_tag' ) ) {
+				return;
+			}
+
+			// Restore post_tag for tribe_events post type.
+			if ( post_type_exists( self::POSTTYPE ) ) {
+				register_taxonomy_for_object_type( 'post_tag', self::POSTTYPE );
+			}
+
+			// Restore post_tag for tec_calendar_embed post type.
+			if ( post_type_exists( 'tec_calendar_embed' ) ) {
+				register_taxonomy_for_object_type( 'post_tag', 'tec_calendar_embed' );
+			}
+		}
+
+		/**
 		 * Get the rewrite slug
 		 *
 		 * @return string
@@ -2889,7 +2915,12 @@ if ( ! class_exists( 'Tribe__Events__Main' ) ) {
 				self::clear_ct1_activation_state();
 			}
 
-			if ( ! is_network_admin() && ! isset( $_GET['activate-multi'] ) ) {
+			// Flag a single-site activation so we can redirect to the onboarding wizard on the next
+			// admin load. Bulk activations are filtered out there, where WordPress exposes the
+			// `activate-multi` flag; it is not yet set while this activation hook runs.
+			// Only arm the redirect on real admin-side activations: CLI, REST and automated
+			// (test) activations run with is_admin() false and must not hijack the next request.
+			if ( ! is_network_admin() && is_admin() ) {
 				set_transient( '_tribe_events_activation_redirect', 1, 30 );
 			}
 		}
@@ -3039,11 +3070,34 @@ if ( ! class_exists( 'Tribe__Events__Main' ) ) {
 		}
 
 		/**
+		 * Whether the current user may publish this post (used before `wp_publish_post` on linked venues/organizers).
+		 *
+		 * @since 6.15.19
+		 *
+		 * @param int $linked_post_id Post ID.
+		 *
+		 * @return bool
+		 */
+		protected function user_can_publish_linked_post_for_user( int $linked_post_id ): bool {
+			$linked_post = get_post( $linked_post_id );
+
+			if ( ! $linked_post ) {
+				return false;
+			}
+
+			return 'publish' === $linked_post->post_status
+				? current_user_can( 'edit_post', $linked_post->ID )
+				: current_user_can( 'publish_post', $linked_post->ID );
+		}
+
+
+		/**
 		 * Publishes associated venue/organizer when an event is published
 		 *
-		 * @param int     $post_id The post ID.
-		 * @param WP_Post $post    The post object.
+		 * @since 6.15.4 Added new logic to generate permalinks for Organizer/Venue when the `post_name` is blank.
 		 *
+		 * @param int     $post_id The post ID.
+		 * @param WP_Post $post    The post.
 		 */
 		public function publishAssociatedTypes( $post_id, $post ) {
 
@@ -3054,6 +3108,10 @@ if ( ! class_exists( 'Tribe__Events__Main' ) ) {
 			// Remove any "preview" venues and organizers (duplicates) attached to this event.
 			$this->remove_preview_venues( $post_id, true );
 			$this->remove_preview_organizers( $post_id, true );
+
+			if ( ! is_user_logged_in() ) {
+				return;
+			}
 
 			// save venue and organizer info on first pass
 			if ( isset( $post->post_status ) && $post->post_status == 'publish' ) {
@@ -3073,10 +3131,30 @@ if ( ! class_exists( 'Tribe__Events__Main' ) ) {
 						continue;
 					}
 
+					$expected_post_type = 'venue' === $type
+						? Tribe__Events__Venue::POSTTYPE
+						: Tribe__Events__Organizer::POSTTYPE;
+
 					$linked_post_ids = is_array( $pm[ $id_index ] ) ? $pm[ $id_index ] : [ $pm[ $id_index ] ];
 
 					foreach ( $linked_post_ids as $linked_post_id ) {
+						$linked_post_id = absint( $linked_post_id );
+
 						if ( ! $linked_post_id ) {
+							continue;
+						}
+
+						$linked_post = get_post( $linked_post_id );
+
+						if ( ! $linked_post instanceof WP_Post ) {
+							continue;
+						}
+
+						if ( $linked_post->post_type !== $expected_post_type ) {
+							continue;
+						}
+
+						if ( ! $this->user_can_publish_linked_post_for_user( $linked_post_id ) ) {
 							continue;
 						}
 
@@ -3085,6 +3163,31 @@ if ( ! class_exists( 'Tribe__Events__Main' ) ) {
 						}
 
 						wp_publish_post( $linked_post_id );
+
+						// Generate a unique slug if missing.
+						if ( empty( get_post_field( 'post_name', $linked_post_id ) ) ) {
+							$title = get_the_title( $linked_post_id );
+
+							// Provide a fallback if title is empty.
+							if ( empty( $title ) ) {
+								$title = $type . '-' . $linked_post_id;
+							}
+
+							$slug = wp_unique_post_slug(
+								sanitize_title( $title ),
+								$linked_post_id,
+								'publish',
+								get_post_type( $linked_post_id ),
+								0
+							);
+
+							wp_update_post(
+								[
+									'ID'        => $linked_post_id,
+									'post_name' => $slug,
+								]
+							);
+						}
 					}
 				}
 			}
@@ -3230,11 +3333,14 @@ if ( ! class_exists( 'Tribe__Events__Main' ) ) {
 		 *
 		 */
 		public function ajax_form_validate() {
+			$post_type = get_post_type_object( self::POSTTYPE );
+
 			if (
 				$_REQUEST['name']
 				&& $_REQUEST['nonce']
 				&& $_REQUEST['type']
 				&& wp_verify_nonce( $_REQUEST['nonce'], 'tribe-validation-nonce' )
+				&& current_user_can( $post_type->cap->edit_posts )
 			) {
 				echo $this->verify_unique_name( $_REQUEST['name'], $_REQUEST['type'] );
 				die;

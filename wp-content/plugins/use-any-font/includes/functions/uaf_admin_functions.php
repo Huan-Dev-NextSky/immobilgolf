@@ -276,12 +276,13 @@ function uaf_trigger_actions(){
 
 		if (isset($_POST['submit-uaf-font-js'])){   
 		    if ( isset($_POST['uaf_nonce']) && wp_verify_nonce($_POST['uaf_nonce'], 'uaf_font_upload_js')) {
-			    $font_weight = $font_style  = '';
+			    $font_weight = $font_style = $font_stretch = '';
 			    if (isset($_POST['enable_font_variation'])){
-			    	$font_weight 	= sanitize_key($_POST['font_weight']);
-			    	$font_style 	= sanitize_key($_POST['font_style']);
+			    	$font_weight 	    = sanitize_key($_POST['font_weight']);
+			    	$font_style 	    = sanitize_key($_POST['font_style']);
+			    	$font_stretch 	    = sanitize_key($_POST['font_stretch']);
 			    }
-			    $actionReturn = uaf_save_font_files($_POST['font_name'], $font_weight, $font_style, $_POST['convert_response']);
+			    $actionReturn = uaf_save_font_files($_POST['font_name'], $font_weight, $font_style, $_POST['convert_response'], '', $font_stretch);
 			} else {
 				$actionReturn = $actionReturnNonceError;
 			}
@@ -337,7 +338,11 @@ function uaf_trigger_actions(){
 		}
 
 		if (isset($_GET['predefinedfontid'])){
-		    $actionReturn = uaf_add_pre_defined_font($_GET['predefinedfontid']);
+			if ( isset($_GET['uaf_nonce']) && wp_verify_nonce($_GET['uaf_nonce'], 'uaf_add_predefined_font')) {
+				$actionReturn = uaf_add_pre_defined_font($_GET['predefinedfontid']);
+			} else {
+				$actionReturn = $actionReturnNonceError;
+			}
 		}		
 
 	} else {

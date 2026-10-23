@@ -199,7 +199,14 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			//output elementor icons
 			$jsonElementorIcons = UniteFontManagerUC::elementor_getJsonIcons();
 			$js .= self::TAB2.'var g_ucElIcons = '.$jsonElementorIcons.';'.self::BR;
-
+			// output google fonts data (used by settings scripts)
+			$fontData = HelperUC::getFontPanelData();
+			$googleFonts = UniteFunctionsUC::getVal($fontData, "arrGoogleFonts");
+			$googleFontsBaseUrl = HelperHtmlUC::getGoogleFontBaseUrl();
+			$js .= self::TAB2.'if(typeof g_ucGoogleFonts === "undefined"){ var g_ucGoogleFonts = '.UniteFunctionsUC::jsonEncodeForClientSide(array(
+				"fonts" => $googleFonts,
+				"base_url" => $googleFontsBaseUrl,
+			)).'; }'.self::BR;
 
 			//get nonce
 			if(method_exists("UniteProviderFunctionsUC", "getNonce"))
@@ -233,7 +240,9 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 
 		/**
-		 * get version text
+		 * get version text:
+		 * - always include the first 3 changelog sections
+		 * - if combined text is under 400 characters, also include up to 2 more (max 5 total)
 		 */
 		public static function getVersionText(){
 
@@ -244,10 +253,111 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			
 			$content = UniteFunctionsUC::fileGetContents($filepath);
 			$content = trim($content);
-			
-			//$content = substr($content, 0, 10000);
-			
-			return ($content);
+
+			$firstSection = self::getFirstChangelogVersionSection($content);
+			if($firstSection !== null)
+				return $firstSection;
+
+			return substr($content, 0, 7000);
+		}
+
+		/**
+		 * Extract first changelog sections from `changelog.txt` (readme-style lines: "= 1.2.3 - date =").
+		 * Always returns at least the first 3 sections (if available).
+		 * If the combined text of the first 3 sections is under 400 characters, append up to 2 more sections.
+		 *
+		 * @param string $content
+		 * @return string|null
+		 */
+		private static function getFirstChangelogVersionSection($content){
+
+			$normalized = str_replace("\r\n", "\n", $content);
+			$lines = explode("\n", $normalized);
+			$versionLinePattern = '/^= .+ =\s*$/';
+
+			$startIndex = null;
+			foreach($lines as $i => $line){
+				if(preg_match($versionLinePattern, $line)){
+					$startIndex = (int) $i;
+					break;
+				}
+			}
+
+			if($startIndex === null)
+				return null;
+
+			$count = count($lines);
+
+			$minSections = 3;
+			$maxSections = 5;
+			$maxCharsAfterMin = 5000;
+
+			$arrSectionsText = array();
+			$nextSectionStartIndex = $startIndex;
+
+			// 1) Always pull first N sections (default 3)
+			for($secIndex = 0; $secIndex < $minSections; $secIndex++){
+				if($nextSectionStartIndex === null)
+					break;
+
+				$section = self::extractSingleChangelogVersionSection($lines, $count, $versionLinePattern, $nextSectionStartIndex);
+				if(!empty($section["text"]))
+					$arrSectionsText[] = $section["text"];
+
+				$nextSectionStartIndex = $section["next_heading_index"];
+			}
+
+			if(empty($arrSectionsText))
+				return null;
+
+			$joinedText = implode("\n\n", $arrSectionsText);
+			$joinedLen = function_exists("mb_strlen") ? mb_strlen($joinedText, "UTF-8") : strlen($joinedText);
+
+			// If we couldn't collect enough sections, just return what we have.
+			if(count($arrSectionsText) < $minSections)
+				return $joinedText;
+
+			// 2) If short enough, append up to (max - min) more sections (default +2)
+			if($joinedLen < $maxCharsAfterMin){
+				for($secIndex = count($arrSectionsText); $secIndex < $maxSections; $secIndex++){
+					if($nextSectionStartIndex === null)
+						break;
+
+					$section = self::extractSingleChangelogVersionSection($lines, $count, $versionLinePattern, $nextSectionStartIndex);
+					if(!empty($section["text"]))
+						$arrSectionsText[] = $section["text"];
+
+					$nextSectionStartIndex = $section["next_heading_index"];
+				}
+			}
+
+			return implode("\n\n", $arrSectionsText);
+		}
+
+		/**
+		 * @param array $lines
+		 * @param int $lineCount
+		 * @param string $versionLinePattern
+		 * @param int $sectionStartIndex
+		 * @return array
+		 */
+		private static function extractSingleChangelogVersionSection($lines, $lineCount, $versionLinePattern, $sectionStartIndex){
+
+			$sectionLines = array($lines[$sectionStartIndex]);
+			$nextHeadingIndex = null;
+
+			for($j = $sectionStartIndex + 1; $j < $lineCount; $j++){
+				if(preg_match($versionLinePattern, $lines[$j])){
+					$nextHeadingIndex = $j;
+					break;
+				}
+				$sectionLines[] = $lines[$j];
+			}
+
+			return array(
+				"text" => trim(implode("\n", $sectionLines)),
+				"next_heading_index" => $nextHeadingIndex,
+			);
 		}
 
 		/**
@@ -255,9 +365,17 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		 */
 		public static function getErrorMessageHtml($message, $trace = "", $withCSS = false){
 
+			$allowedHtml = array(
+				"b" => array(),
+				"strong" => array(),
+				"em" => array(),
+				"i" => array(),
+				"br" => array(),
+			);
+
 			$html = '<div class="unite-error-message">';
 			$html .= '<div style="unite-error-message-inner">';
-			$html .= $message;
+			$html .= wp_kses($message, $allowedHtml);
 
 			if($withCSS == true){
 				$html .= "<style> .unite-error-message{color:red;}  </style>";
@@ -265,13 +383,96 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 			if(!empty($trace)){
 				$html .= '<div class="unite-error-message-trace">';
-				$html .= "<pre>{$trace}</pre>";
+				$html .= "<pre>" . esc_html($trace) . "</pre>";
 				$html .= "</div>";
 			}
 
 			$html .= '</div></div>';
 
 			return($html);
+		}
+
+		/**
+		 * Tags and attributes allowed in plugin-built HTML.
+		 */
+		public static function getOutputAllowedHtml(){
+
+			static $allowed = null;
+
+			if($allowed !== null)
+				return $allowed;
+
+			$commonAttrs = array(
+				"class" => true,
+				"id" => true,
+				"style" => true,
+			);
+
+			$allowed = array(
+				"div" => array_merge($commonAttrs, array(
+					"align" => true,
+				)),
+				"span" => $commonAttrs,
+				"p" => $commonAttrs,
+				"pre" => array(
+					"style" => true,
+				),
+				"br" => array(),
+				"b" => array(),
+				"strong" => array(),
+				"em" => array(),
+				"i" => array(),
+				"style" => array(
+					"type" => true,
+				),
+				"a" => array(
+					"href" => true,
+					"class" => true,
+					"target" => true,
+				),
+				"button" => array_merge($commonAttrs, array(
+					"type" => true,
+					"data-*" => true,
+				)),
+			);
+
+			return $allowed;
+		}
+
+		/**
+		 * Print plugin-built HTML through wp_kses.
+		 */
+		public static function putHtml($html){
+
+			echo wp_kses((string)$html, self::getOutputAllowedHtml());
+		}
+
+		/**
+		 * Print a stylesheet or script include.
+		 */
+		public static function putAssetIncludeHtml($html){
+
+			echo wp_kses((string)$html, array(
+				"link" => array(
+					"rel" => true,
+					"type" => true,
+					"href" => true,
+					"id" => true,
+				),
+				"script" => array(
+					"type" => true,
+					"src" => true,
+					"id" => true,
+				),
+			)) . "\n";
+		}
+
+		/**
+		 * Print an error message.
+		 */
+		public static function putErrorMessageHtml($message, $trace = "", $withCSS = false){
+
+			self::putHtml(self::getErrorMessageHtml($message, $trace, $withCSS));
 		}
 
 		/**
@@ -382,9 +583,15 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		/**
 		 * get css include
 		 */
-		public static function getHtmlCssInclude($url){
+		public static function getHtmlCssInclude($url, $handle = null){
+
+			$url = esc_url($url);
+			$addHTML = "";
+			if(!empty($handle))
+				$addHTML = " id='" . esc_attr($handle) . "'";
+
 			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet
-			$html = "<link rel=\"stylesheet\" type=\"text/css\" href=\"{$url}\">";
+			$html = "<link rel=\"stylesheet\" type=\"text/css\" href=\"{$url}\"{$addHTML}>";
 
 			return($html);
 		}
@@ -393,9 +600,15 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		/**
 		 * get css include
 		 */
-		public static function getHtmlJsInclude($url){
+		public static function getHtmlJsInclude($url, $handle=null){
+
+			$url = esc_url($url);
+			$addHTML = "";
+			if(!empty($handle))
+				$addHTML = " id='" . esc_attr($handle) . "'";
+
 			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript
-			$html = "<script type=\"text/javascript\" src=\"{$url}\"></script>";
+			$html = "<script type=\"text/javascript\" src=\"{$url}\"{$addHTML}></script>";
 
 			return($html);
 		}
@@ -458,7 +671,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 				if($isArray == true){
 					$html .= "$key:";
 					$html .= "<pre style='padding-left:60px;font-size:12px;'>";
-					$html .= print_r($value, true);
+					$html .= uelm_html_debug($value);
 					$html .= "</pre>";
 				}
 				else{
@@ -476,14 +689,14 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 			return($html);
 		}
-
-		protected function z_________PUTTERS_______(){}
+		
+		protected function z_________DEBUG_______(){}
 		
 		/**
 		 * put debug box
 		 */
 		public static function putHtmlDataDebugBox($data){
-						
+			
 			self::putHtmlDataDebugBox_start();
 			
 			if(is_array($data))
@@ -524,11 +737,24 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			
 			return("background: lightgrey; padding: 10px; margin-bottom: 10px; font-size: 12px; overflow:auto;");
 		}
+
+		/**
+		 * Print the opening debug-query wrapper.
+		 */
+		public static function putQueryDebugWrapperStart(){
+
+			$style = self::getQueryDebugWrapperStyles();
+			self::putHtml("<div class='uc-debug-query-wrapper' style='{$style}'>");
+		}
 		
 		/**
 		 * get debug message html output
 		 */
 		public static function getDebugWarningMessageHtml($message){
+
+			$message = wp_kses($message, array(
+				"br" => array(),
+			));
 			
 			$html = "
 				<div style='background-color:#e3af7b;
@@ -544,6 +770,18 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			
 			return($html);
 		}
+
+		/**
+		 * Print a debug warning message.
+		 */
+		public static function putDebugWarningMessage($message){
+
+			self::putHtml(self::getDebugWarningMessageHtml($message));
+		}
+		
+		
+		protected function z_________PUTTERS_______(){}
+		
 		
 		
 		/**
@@ -1275,31 +1513,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		 */
 		public static function putPHPInfo(){
 
-			UniteFunctionsUC::obStart();
-			HelperHtmlUC::putAddonTypesBrowserDialogs();
+			echo "<p>" . esc_html__("PHP configuration details are not shown here because they include server file paths.", "unlimited-elements-for-elementor") . "</p>";
 
-			phpinfo();
-
-			$content = ob_get_contents();
-
-			ob_end_clean();
-
-			//clean css
-			$content = str_replace("body {background-color:", "xbody {background-color:", $content);
-			$content = str_replace("a:link", ".uc-phpino a:link", $content);
-
-			?>
-
-			<br>
-
-			<div class="uc-phpino" style="overflow-x:scroll;width:100%;">
-
-			<?php 
-			uelm_echo($content);
-			?>
-
-			</div>
-<?php
 		}
 
 		/**
@@ -1371,11 +1586,10 @@ function <?php echo esc_attr($widgetID)?>_start(){
 			endif;
 			
 			?>
-}if(jQuery("#<?php echo esc_attr($widgetID)?>").length) <?php echo esc_attr($widgetID)?>_start();
+}if(jQuery("#<?php echo esc_attr($widgetID)?>").length && !jQuery("#<?php echo esc_attr($widgetID)?>").parents('[data-elementor-type="popup"]').length) <?php echo esc_attr($widgetID)?>_start();
 	jQuery( document ).on( 'elementor/popup/show', (event, id, objPopup) => {
-	if(objPopup.$element.has(jQuery("#<?php echo esc_attr($widgetID)?>")).length) <?php echo esc_attr($widgetID)?>_start();});
+	if(objPopup.$element.has(jQuery("#<?php echo esc_attr($widgetID)?>")).length) <?php echo esc_attr($widgetID)?>_start()});
 });
-
 			<?php
 
 		}

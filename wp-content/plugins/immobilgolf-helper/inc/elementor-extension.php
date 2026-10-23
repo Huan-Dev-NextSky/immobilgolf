@@ -33,6 +33,8 @@ final class Immobilgolf_Elementor_Extension {
 		\Elementor\Plugin::instance()->widgets_manager->register_widget_type( new \Immobilgolf_MapFilter_Element() );
 		require_once( plugin_dir_path( __DIR__ ) . 'elementors/agencies-filter.php' );
 		\Elementor\Plugin::instance()->widgets_manager->register_widget_type( new \Immobilgolf_AgenciesFilter_Element() );
+		require_once( plugin_dir_path( __DIR__ ) . 'elementors/auth-form.php' );
+		\Elementor\Plugin::instance()->widgets_manager->register_widget_type( new \Immobilgolf_Auth_Form_Element() );
 	}
 }
 Immobilgolf_Elementor_Extension::instance();

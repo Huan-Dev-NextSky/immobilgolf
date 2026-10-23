@@ -15,7 +15,14 @@ class Tribe__Events__REST__V1__Post_Repository implements Tribe__Events__REST__I
 	 */
 	protected $messages;
 
-	public function __construct( Tribe__REST__Messages_Interface $messages = null ) {
+	/**
+	 * Tribe__Events__REST__V1__Post_Repository constructor.
+	 *
+	 * @since 6.17.0 Made $messages explicitly nullable.
+	 *
+	 * @param Tribe__REST__Messages_Interface|null $messages The messages handler to use, or `null` to build a default one.
+	 */
+	public function __construct( ?Tribe__REST__Messages_Interface $messages = null ) {
 		$this->types_get_map = array(
 			Tribe__Events__Main::POSTTYPE            => array( $this, 'get_event_data' ),
 			Tribe__Events__Main::VENUE_POST_TYPE     => array( $this, 'get_venue_data' ),
@@ -344,7 +351,8 @@ class Tribe__Events__REST__V1__Post_Repository implements Tribe__Events__REST__I
 		 */
 		$data = apply_filters( 'tribe_rest_event_venue_data', array_filter( $data ), get_post( $event_or_venue_id ) );
 
-		$data = array_filter( $data );
+		// Filters may drop entries; reset the keys so the result still serializes as a JSON list.
+		$data = array_values( array_filter( $data ) );
 
 		return count( $data ) === 1 ? reset( $data ) : $data;
 	}
@@ -538,9 +546,10 @@ class Tribe__Events__REST__V1__Post_Repository implements Tribe__Events__REST__I
 		 */
 		$data = apply_filters( 'tribe_rest_event_organizer_data', array_filter( $data ), get_post( $event_or_organizer_id ) );
 
-		$data = array_filter( $data );
+		// Filters may drop entries; reset the keys so the result still serializes as a JSON list.
+		$data = array_values( array_filter( $data ) );
 
-		return $single ? reset( $data ) : $data;
+		return $single ? ( $data[0] ?? [] ) : $data;
 	}
 
 	/**

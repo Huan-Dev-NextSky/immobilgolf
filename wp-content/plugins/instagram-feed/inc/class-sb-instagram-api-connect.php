@@ -363,7 +363,7 @@ class SB_Instagram_API_Connect
 		$num = !empty($params['num']) ? (int)$params['num'] : 33;
 
 		$fields = ($connect_type === 'business_basic') ? 'user_id,username,name,account_type,profile_picture_url,followers_count,follows_count,media_count,biography' : 'id,username,media_count,account_type';
-		$media_fields = ($connect_type === 'business_basic') ? 'media_url,thumbnail_url,caption,id,media_type,timestamp,username,comments_count,like_count,permalink,children%7Bmedia_url,id,media_type,timestamp,permalink,thumbnail_url%7D' : 'media_url,thumbnail_url,caption,id,media_type,timestamp,username,permalink,children%7Bmedia_url,id,media_type,timestamp,permalink,thumbnail_url%7D';
+		$media_fields = ($connect_type === 'business_basic') ? 'media_url,thumbnail_url,caption,id,media_type,timestamp,username,comments_count,like_count,permalink,is_shared_to_feed,children%7Bmedia_url,id,media_type,timestamp,permalink,thumbnail_url%7D' : 'media_url,thumbnail_url,caption,id,media_type,timestamp,username,permalink,is_shared_to_feed,children%7Bmedia_url,id,media_type,timestamp,permalink,thumbnail_url%7D';
 
 		$base_url = 'https://graph.instagram.com/';
 
@@ -372,6 +372,11 @@ class SB_Instagram_API_Connect
 				return $base_url . 'refresh_access_token?grant_type=ig_refresh_token&access_token=' . $access_token;
 			case 'header':
 				return $base_url . 'me?fields=' . $fields . '&access_token=' . $access_token;
+			case 'media':
+				// Single media endpoint for fetching individual post details
+				$media_id = !empty($params['media_id']) ? $params['media_id'] : '';
+				$media_fields = !empty($params['fields']) ? $params['fields'] : 'thumbnail_url,media_url,media_type';
+				return $base_url . $media_id . '?fields=' . $media_fields . '&access_token=' . $access_token;
 			default:
 				$num = min($num, 200);
 				return $base_url . $connected_account['user_id'] . '/media?fields=' . $media_fields . '&limit=' . $num . '&access_token=' . $access_token;
@@ -393,13 +398,18 @@ class SB_Instagram_API_Connect
 		$num = !empty($params['num']) ? (int)$params['num'] : 33;
 
 		$header_fields = 'biography,id,username,website,followers_count,media_count,profile_picture_url,name';
-		$media_fields = 'media_url,media_product_type,thumbnail_url,caption,id,media_type,timestamp,username,comments_count,like_count,permalink,children%7Bmedia_url,id,media_type,timestamp,permalink,thumbnail_url%7D';
+		$media_fields = 'media_url,media_product_type,thumbnail_url,caption,id,media_type,timestamp,username,comments_count,like_count,permalink,is_shared_to_feed,children%7Bmedia_url,id,media_type,timestamp,permalink,thumbnail_url%7D';
 
 		$base_url = 'https://graph.facebook.com/';
 
 		switch ($endpoint) {
 			case 'header':
 				return $base_url . $connected_account['user_id'] . '?fields=' . $header_fields . '&access_token=' . $access_token;
+			case 'media':
+				// Single media endpoint for fetching individual post details
+				$media_id = !empty($params['media_id']) ? $params['media_id'] : '';
+				$media_fields_single = !empty($params['fields']) ? $params['fields'] : 'thumbnail_url,media_url,media_type';
+				return $base_url . $media_id . '?fields=' . $media_fields_single . '&access_token=' . $access_token;
 			default:
 				$num = min($num, 200);
 				return $base_url . $connected_account['user_id'] . '/media?fields=' . $media_fields . '&limit=' . $num . '&access_token=' . $access_token;

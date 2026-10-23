@@ -27,7 +27,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		private static $arrDebug;
 		private static $hasOutput = false;
 		public static $arrWidgetScripts = array();
-
+		private static $arrUsedHTMLHandles = array();
+		
 		public static function a____GENERAL____(){}
 
 		/**
@@ -363,6 +364,17 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			
 			return($value);
 		}
+
+		/**
+		 * check if current user can see widget debug output
+		 */
+		public static function canShowDebugOutput(){
+
+			if(class_exists("UniteFunctionsWPUC") == false)
+				return(false);
+
+			return UniteFunctionsWPUC::isCurrentUserHasPermissions();
+		}
 		
 		
 		/**
@@ -572,8 +584,23 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 
 		public static function a________URL_AND_PATH_________(){}
-
-
+		
+		/**
+		 * check if some file exists and is under base path
+		 */
+		public static function isFileUnderBase($filepath){
+						
+			$isUnderBase = UniteFunctionsUC::isPathUnderBase($filepath, GlobalsUC::$path_base);
+			
+			if($isUnderBase == false)
+				return(false);
+		
+			if(is_file($filepath) == false)
+				return(false);
+			
+			return(true);
+		}
+	
 		/**
 		 * convert url to full url
 		 */
@@ -662,11 +689,15 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		public static function urlToPath($url){
 
 			$urlRelative = self::URLtoRelative($url);
-						
+
+			//check path traversal
+			if(strpos($urlRelative, '../') !== false)
+				return(null);
+			
 			$path = GlobalsUC::$path_base.$urlRelative;
 			
 			$path = UniteFunctionsUC::cleanPath($path);
-						
+			
 			if(file_exists($path) == false)
 				return(null);
 
@@ -981,7 +1012,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 	 * get url content
 	 */
 	public static function getFileContentByUrl($url, $filterExtention = null){
-
+		
 		if(!empty($filterExtention)){
 			$info = pathinfo($url);
 			$ext = UniteFunctionsUC::getVal($info, "extension");
@@ -990,15 +1021,15 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			if($ext != $filterExtention)
 				return (null);
 		}
-
+		
 		$pathFile = self::urlToPath($url);
-
+		
 		if(empty($pathFile))
 			return (null);
 
 		if(file_exists($pathFile) == false)
 			return (null);
-
+		
 		$content = UniteFunctionsUC::fileGetContents($pathFile);
 
 		return ($content);
@@ -1473,8 +1504,60 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			HelperUC::putCustomScript("var g_ucRemoteHideErrors=true;", false, "remote_controls_hide_errors");
 		
 	}
-	
 
+	/**
+	 * put script html, if the handle didn't used
+	 */
+	public static function putScriptHtml($url, $handle = null){
+		
+		if(empty($handle))
+			$handle = self::convertTitleToHandle($url);
+		
+		if($handle == "jquery"){
+			$isJQueryInPage = wp_script_is( 'jquery', 'enqueued' );
+			if($isJQueryInPage == true){
+				self::$arrUsedHTMLHandles[$handle] = true;
+				return(false);
+			}
+		}
+		
+		
+		if($handle != "jquery")
+			$handle = "ue_js_{$handle}";
+		
+		if(isset(self::$arrUsedHTMLHandles[$handle]))
+			return(false);	
+		
+		self::$arrUsedHTMLHandles[$handle] = true;
+		
+		$htmlInclude = HelperHtmlUC::getHtmlJsInclude($url, $handle);
+
+		HelperHtmlUC::putAssetIncludeHtml($htmlInclude);		
+	}
+	
+	
+	/**
+	 * put style html, if the handle didn't used
+	 */
+	public static function putStyleHtml($url, $handle = null){
+		
+		if(empty($handle))
+			$handle = self::convertTitleToHandle($url);
+		
+		$handle = "ue_css_{$handle}";
+		
+		if(isset(self::$arrUsedHTMLHandles[$handle]))
+			return(false);	
+		
+		self::$arrUsedHTMLHandles[$handle] = true;
+		
+		$htmlInclude = HelperHtmlUC::getHtmlCssInclude($url, $handle);
+
+		HelperHtmlUC::putAssetIncludeHtml($htmlInclude);
+		
+	}
+	
+	
 	/**
 	 *
 	 * register style helper function
@@ -1732,7 +1815,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 	 */
 	public static function isElementorEditMode(){
 
-		if(isset($_GET["elementor-preview"]))
+		if(isset($_GET["elementor-preview"])) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Elementor adds this query arg in the editor preview. Only its presence is checked.
 			return (true);
 
 		$argPost = UniteFunctionsUC::getPostGetVariable("post", "", UniteFunctionsUC::SANITIZE_KEY);
@@ -1876,7 +1959,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			}else
 				$layout = $layoutID;    //if object passed
 
-			$outputLayout = new UniteCreatorLayoutOutput();
+			$outputLayout = new UELM_CreatorLayoutOutput();
 			$outputLayout->initByLayout($layout);
 
 			if(!empty($mode))
@@ -1951,4 +2034,5 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 }
 
 //init the operations
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Class property assignment, not a loose global.
 HelperUC::$operations = new UCOperations();

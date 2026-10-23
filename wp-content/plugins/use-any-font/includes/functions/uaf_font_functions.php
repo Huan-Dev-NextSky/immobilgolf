@@ -26,7 +26,7 @@ function uaf_get_font_families(){
 	return $fonts_uaf;
 }
 
-function uaf_save_font_files($font_name, $font_weight, $font_style, $convertResponse, $predefined_font_id = ''){
+function uaf_save_font_files($font_name, $font_weight, $font_style, $convertResponse, $predefined_font_id = '', $font_stretch = ''){
 	uaf_create_folder(); // CREATE FOLDER IF DOESN"T EXISTS
 	$uafPath 				= uaf_path_details();
 	$fontNameToStore 		= sanitize_file_name(rand(0,9999).$font_name);
@@ -75,7 +75,7 @@ function uaf_save_font_files($font_name, $font_weight, $font_style, $convertResp
 				endif;
 			endforeach;
 		else:
-			uaf_save_font_entry_to_db($font_name, $font_weight, $font_style, $fontNameToStore, $predefined_font_id);
+			uaf_save_font_entry_to_db($font_name, $font_weight, $font_style, $fontNameToStore, $predefined_font_id, $font_stretch);
 			$fontUploadFinalResponse['status']   = 'success';
 			$fontUploadFinalResponse['body']	 = 'Font Uploaded';
 		endif;
@@ -109,7 +109,7 @@ function uaf_create_folder() {
     }
 }
 
-function uaf_save_font_entry_to_db($font_name, $font_weight, $font_style, $font_path, $predefined_font_id = ''){
+function uaf_save_font_entry_to_db($font_name, $font_weight, $font_style, $font_path, $predefined_font_id = '', $font_stretch = ''){
 	$fontsRawData 	= get_option('uaf_font_data');
 	$fontsData		= json_decode($fontsRawData, true);
 	if (empty($fontsData)):
@@ -130,6 +130,10 @@ function uaf_save_font_entry_to_db($font_name, $font_weight, $font_style, $font_
 	
 	if (!empty(trim($font_style))){
 		$fontsData[$fontArrayKey]['font_style']	= sanitize_title($font_style);
+	}
+
+	if (!empty(trim($font_stretch))){
+		$fontsData[$fontArrayKey]['font_stretch']	= sanitize_title($font_stretch);
 	}
 
 	$updateFontData	= json_encode($fontsData);
@@ -165,7 +169,7 @@ function uaf_write_css(){
 					font-family: '<?php echo esc_html($fontData['font_name']) ?>';
 					src: <?php if (file_exists($uaf_upload_dir.$fontData['font_path'].'.woff2')){ ?>url('<?php echo esc_url($uaf_upload_url.$fontData['font_path']) ?>.woff2') format('woff2'),
 						<?php } ?>url('<?php echo esc_url($uaf_upload_url.$fontData['font_path']) ?>.woff') format('woff');
-					<?php echo array_key_exists('font_weight',$fontData)?'font-weight: '.esc_html($fontData['font_weight']).';':''; ?> <?php echo array_key_exists('font_style',$fontData)?'font-style: '.esc_html($fontData['font_style']).';':''; ?> font-display: <?php echo esc_html($GLOBALS['uaf_user_settings']['uaf_font_display_property']); ?>;
+					<?php echo array_key_exists('font_weight',$fontData)?'font-weight: '.esc_html($fontData['font_weight']).';':''; ?> <?php echo array_key_exists('font_style',$fontData)?'font-style: '.esc_html($fontData['font_style']).';':''; ?> <?php echo (array_key_exists('font_stretch',$fontData) && !empty($fontData['font_stretch']))?'font-stretch: '.esc_html($fontData['font_stretch']).';':''; ?> font-display: <?php echo esc_html($GLOBALS['uaf_user_settings']['uaf_font_display_property']); ?>;
 				}
 
 				.<?php echo esc_html($fontData['font_name']) ?>{font-family: '<?php echo esc_html($fontData['font_name']) ?>' !important;}
@@ -183,7 +187,7 @@ function uaf_write_css(){
 				} else {
 					$font_name = $fontsData[$fontImplementData['font_key']]['font_name'];
 				}?>
-				<?php echo esc_html($fontImplementData['font_elements']); ?>{
+				<?php echo uaf_sanitize_css_selector($fontImplementData['font_elements']); ?>{
 					font-family: '<?php echo esc_html($font_name);  ?>' !important;
 				}
 		<?php
@@ -207,7 +211,7 @@ function uaf_write_css(){
 					font-family: '<?php echo esc_html($fontData['font_name']) ?>';
 					src: <?php if (file_exists($uaf_upload_dir.$fontData['font_path'].'.woff2')){ ?>url('<?php echo esc_url($uaf_upload_url.$fontData['font_path']) ?>.woff2') format('woff2'),
 						<?php } ?>url('<?php echo esc_url($uaf_upload_url.$fontData['font_path']) ?>.woff') format('woff');
-						<?php echo array_key_exists('font_weight',$fontData)?'font-weight: '.esc_html($fontData['font_weight']).';':''; ?> <?php echo array_key_exists('font_style',$fontData)?'font-style: '.esc_html($fontData['font_style']).';':''; ?> font-display: <?php echo esc_html($GLOBALS['uaf_user_settings']['uaf_font_display_property']); ?>;
+						<?php echo array_key_exists('font_weight',$fontData)?'font-weight: '.esc_html($fontData['font_weight']).';':''; ?> <?php echo array_key_exists('font_style',$fontData)?'font-style: '.esc_html($fontData['font_style']).';':''; ?> <?php echo (array_key_exists('font_stretch',$fontData) && !empty($fontData['font_stretch']))?'font-stretch: '.esc_html($fontData['font_stretch']).';':''; ?> font-display: <?php echo esc_html($GLOBALS['uaf_user_settings']['uaf_font_display_property']); ?>;
 				}
 
 				.<?php echo esc_html($fontData['font_name']) ?>{font-family: '<?php echo esc_html($fontData['font_name']) ?>' !important;}
@@ -305,6 +309,20 @@ function uaf_save_font_assign(){
 	}	
 	
 	$custom_elements		= trim(sanitize_textarea_field($_POST['custom_elements']));
+
+	if ( empty($font_key) ) {
+	    return array(
+	        'status' => 'error',
+	        'body'   => 'Please select a font before assigning.'
+	    );
+	}
+
+	if ( empty($elements) && empty($custom_elements) ) {
+	    return array(
+	        'status' => 'error',
+	        'body'   => 'Please select at least one element or add a custom element.'
+	    );
+	}
 
 	$fontsData      		= uaf_get_uploaded_font_data();
 	$font_name 				= $fontsData[$font_key]['font_name'];
@@ -469,4 +487,13 @@ function uaf_css_write_error() {
               </div>';
         delete_transient('uaf_css_write_error'); // Remove the error after displaying
     }
+}
+
+function uaf_sanitize_css_selector( $selector ) {
+    // Allow only valid CSS selector characters
+    return preg_replace(
+        '/[^A-Za-z0-9\s\-\_\.\#\>\:\,\*\+\~\[\]\=\"\'\(\)\/]/',
+        '',
+        $selector
+    );
 }

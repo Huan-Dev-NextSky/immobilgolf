@@ -137,7 +137,7 @@ class UniteCreatorElementorIntegrate{
 
 		$addon = $arrAddons[0];
 
-		$widget = new UniteCreatorElementorWidget();
+		$widget = new UELM_CreatorElementorWidget();
         \Elementor\Plugin::instance()->widgets_manager->register($widget);
 
 	}
@@ -201,22 +201,8 @@ class UniteCreatorElementorIntegrate{
 			}else{
 				$name = $addon->getName();
 			}
-
-			//help save action and skip addons that not exists in layout
-			if(self::$isSaveBuilderMode == true){
-
-				$arrWidgetsNames = HelperProviderCoreUC_EL::getWidgetNamesFromElementorContent(self::$arrSaveBuilderContent);
-
-				$nameForCheck = str_replace("_elementor", "", $name);
-
-				if(!isset($arrWidgetsNames[$nameForCheck])){
-
-					continue;
-				}
-			}
-
-
-
+			
+			
 			if($isEnoughtMemory == false){
 
 				self::logMemoryUsage("Skip widget register (no memory): ".$name.", counter: ".self::$counterWidgets, true);
@@ -237,8 +223,8 @@ class UniteCreatorElementorIntegrate{
 
 			self::logMemoryUsage("Before Register Widget: ".$name. ", counter: ".self::$counterWidgets);
 
-			// class_alias('UniteCreatorElementorWidget', $className);
-			$code = "class {$className} extends UniteCreatorElementorWidget{}";
+			// class_alias('UELM_CreatorElementorWidget', $className);
+			$code = "class {$className} extends UELM_CreatorElementorWidget{}";
 			// phpcs:ignore Generic.PHP.ForbiddenFunctions.Found
 			eval($code);
 			try{
@@ -271,11 +257,11 @@ class UniteCreatorElementorIntegrate{
 	 */
 	private function registerWidgetByClassName($className){
 
-		// class_alias('UniteCreatorElementorWidget', $className);
-		$code = "class {$className} extends UniteCreatorElementorWidget{}";
+		// class_alias('UELM_CreatorElementorWidget', $className);
+		$code = "class {$className} extends UELM_CreatorElementorWidget{}";
 		// phpcs:ignore Generic.PHP.ForbiddenFunctions.Found
 	    eval($code);
-		//class_alias('UniteCreatorElementorWidget', $className);
+		//class_alias('UELM_CreatorElementorWidget', $className);
 		$widget = new $className();
 
 		$manager = \Elementor\Plugin::instance()->widgets_manager;
@@ -501,7 +487,7 @@ class UniteCreatorElementorIntegrate{
     	//add hr control
     	require $this->pathDynamicTags."tag_current_timestamp.php";
 
-    	$dynamicTags->register_tag("UnlimitedElementsDynamicTag_TimeStamp");
+    	$dynamicTags->register_tag("UELM_DynamicTag_TimeStamp");
 
     }
 
@@ -562,22 +548,36 @@ class UniteCreatorElementorIntegrate{
 	private function outputBGIncludes($output){
 
 		$arrIncludes = UniteFunctionsUC::getVal($output, "includes");
-
+		
 		if(empty($arrIncludes))
 			return(false);
-
+		
+		$isCachingActive = HelperProviderCoreUC_EL::isElementorCachingActive();
+		
 		foreach($arrIncludes as $include){
 
 			$type = UniteFunctionsUC::getVal($include, "type");
 			$url = UniteFunctionsUC::getVal($include, "url");
 			$handle = UniteFunctionsUC::getVal($include, "handle");
 
-			if($type == "css")
-				HelperUC::addStyleAbsoluteUrl($url, $handle);
-			else
-				HelperUC::addScriptAbsoluteUrl($url, $handle);
+			if($isCachingActive == true){
+				
+				if($type == "css")
+					HelperUC::putStyleHTML($url, $handle);
+				else
+					HelperUC::putScriptHTML($url, $handle);
+			}
+			else{
+				
+				if($type == "css")
+					HelperUC::addStyleAbsoluteUrl($url, $handle);
+				else
+					HelperUC::addScriptAbsoluteUrl($url, $handle);
+			}
 		}
-
+		
+		
+		
 	}
 
 	/**
@@ -590,26 +590,26 @@ class UniteCreatorElementorIntegrate{
 		$rawData = $objElement->get_raw_data();
 
 		$elementID = UniteFunctionsUC::getVal($rawData, "id");
-		
+				
 		try{
 
 			$objAddon = new UniteCreatorAddon();
 			$objAddon->initByAlias($backgroundType, GlobalsUC::ADDON_TYPE_BGADDON);
 
 			if(empty($this->objBackgroundWidget))
-				$this->objBackgroundWidget = new UniteCreatorElementorBackgroundWidget();
+				$this->objBackgroundWidget = new UELM_CreatorElementorBackgroundWidget();
 
 			$arrAddonValues = $this->objBackgroundWidget->getBGSettings($settings, $backgroundType);
-
+			
 			if(!empty($arrAddonValues))
 				$objAddon = $this->objBackgroundWidget->setAddonSettingsFromElementorSettings($objAddon, $arrAddonValues);
-
+			
 
 			if(empty(self::$objAddons))
 				self::$objAddons = new UniteCreatorAddons();
 		
 			$output = self::$objAddons->getAddonOutput($objAddon);
-
+			
 			if(empty($output))
 				return(false);
 			
@@ -618,7 +618,7 @@ class UniteCreatorElementorIntegrate{
 			
 			//put includes
 			$this->outputBGIncludes($output);
-
+			
 			//add location too
 			$location = UniteFunctionsUC::getVal($settings, "uc_background_location");
 
@@ -627,6 +627,8 @@ class UniteCreatorElementorIntegrate{
 			
 			$this->renderBGOutput($elementID, $output);
 			
+			do_action("uelm_render_background_addon", $objAddon);
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 			do_action("ue_render_background_addon", $objAddon);
 			
 		}catch(Exception $e){
@@ -639,7 +641,7 @@ class UniteCreatorElementorIntegrate{
 	 * on before render
 	 */
 	public function onFrontAfterRender($objElement){
-
+		
 		//dmp("after render ".UniteFunctionsUC::getRandomString());
 		
 		$settings = $objElement->get_settings_for_display();
@@ -685,24 +687,21 @@ class UniteCreatorElementorIntegrate{
 	}
 	
 	
-	
 	/**
 	 * check if BG exists in page
+	 * or caching is active, it's like the bg exists - always print code
 	 */
 	private function isBGExistsInPage(){
+				
+		if($this->isBGRendered == true)
+			return(true);
 		
-		$isCachingActive = \Elementor\Plugin::$instance->experiments->is_feature_active( 'e_element_cache' );
+		$isCachingActive = HelperProviderCoreUC_EL::isElementorCachingActive();
 		
-		if($isCachingActive == false)
-			return($this->isBGRendered);
-			
-		//if caching active - assume there is background. no other option to check meanwhile.
-		//TODO: find a way to check if there is background in all the cached contents or not. by some hook.
-			
-		//apply this: $data = apply_filters( 'elementor/frontend/builder_content_data', $data, $post_id );
+		if($isCachingActive == true)
+			return(true);
 		
-			
-		return(true);
+		return(false);
 	}
 	
 	
@@ -715,7 +714,7 @@ class UniteCreatorElementorIntegrate{
 		
 		if($isBGExists == false)
 			return(false);
-		
+					
 		?>
 		<style>
 			.unlimited-elements-background-overlay{
@@ -735,9 +734,9 @@ class UniteCreatorElementorIntegrate{
 		<script type='text/javascript'>
 
 			jQuery(document).ready(function(){
-
+					
 				function ucBackgroundOverlayPutStart(){
-
+				
 					var objBG = jQuery(".unlimited-elements-background-overlay").not(".uc-bg-attached");
 
 					if(objBG.length == 0)
@@ -874,7 +873,7 @@ class UniteCreatorElementorIntegrate{
          	$objAddon = new UniteCreatorAddon();
          	$objAddon->initByDBRecord($record);
 
-         	$objWidget = new UniteCreatorElementorBackgroundWidget();
+         	$objWidget = new UELM_CreatorElementorBackgroundWidget();
          	$objWidget->initBGWidget($objAddon, $objControls);
 
          	$objWidget->registerBGControls();
@@ -1215,10 +1214,10 @@ class UniteCreatorElementorIntegrate{
 
     	if(!empty($stylesIcons))
     		wp_add_inline_style($adminStyleHandle, $stylesIcons);
-
+		
     	//include font awesome
 		$urlFontAwesomeCSS = HelperUC::getUrlFontAwesome();
-
+		
 		HelperUC::addStyleAbsoluteUrl($urlFontAwesomeCSS, "font-awesome");
 
 
@@ -1239,6 +1238,7 @@ class UniteCreatorElementorIntegrate{
 
 			HelperProviderUC::verifyAdminPermission();
 
+	    	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce is verified above with UniteProviderFunctionsUC::verifyNonce().
 	    	$arrTempFile = UniteFunctionsUC::getVal($_FILES, "file");
 	    	UniteFunctionsUC::validateNotEmpty($arrTempFile,"import file");
 
@@ -1246,7 +1246,7 @@ class UniteCreatorElementorIntegrate{
     		$exporter = new UniteCreatorLayoutsExporterElementor();
 	    	$exporter->importElementorTemplateNew($arrTempFile);
 
-	    	wp_redirect(GlobalsUnlimitedElements::$urlTemplatesList);
+	    	wp_safe_redirect(GlobalsUnlimitedElements::$urlTemplatesList);
 	    	exit();
 
     	}catch(Exception $e){
@@ -1387,7 +1387,7 @@ class UniteCreatorElementorIntegrate{
 	 * on the content - clear widget input cache - fix some double render elementor bug
 	 */
 	public function onTheContent($content){
-
+		
 		if(GlobalsProviderUC::$isUnderDynamicTemplateLoop == false)
 			UniteCreatorOutput::clearIncludesCache();
 
@@ -1591,6 +1591,78 @@ class UniteCreatorElementorIntegrate{
 		
 		return($objWidget);
 	}
+
+
+	/**
+	 * Filter/search AJAX: merge Elementor parse_dynamic_settings() into addon params (same as get_settings_for_display() on front-end).
+	 *
+	 * @param UniteCreatorAddon $addon
+	 * @param int|string|null $layoutPostID Document post ID from layoutid request (improves post-id and other document-based tags).
+	 * @return bool True if values were merged.
+	 */
+	public function mergeElementorDynamicSettingsIntoAddon(UniteCreatorAddon $addon, $layoutPostID = null){
+
+		if($addon->hasElementorDynamicSettings() == false)
+			return(false);
+
+		$switchedDocument = false;
+		$previousDocument = null;
+
+		try{
+
+			if(!empty($layoutPostID) && class_exists('\Elementor\Plugin') && !empty(\Elementor\Plugin::$instance->documents)){
+
+				$layoutPostID = (int)$layoutPostID;
+
+				if($layoutPostID > 0 && class_exists('\ElementorPro\Plugin')){
+
+					$document = \Elementor\Plugin::$instance->documents->get($layoutPostID);
+
+					if(!empty($document)){
+
+						$previousDocument = \ElementorPro\Plugin::elementor()->documents->get_current();
+
+						\ElementorPro\Plugin::elementor()->documents->switch_to_document($document);
+						$switchedDocument = true;
+					}
+				}
+			}
+
+			$objWidget = $this->getWidgetFromAddon($addon);
+
+			if(empty($objWidget))
+				return(false);
+
+			$arrResolved = $objWidget->ueGetDynamicSettingsValues(true);
+
+			if(empty($arrResolved) || is_array($arrResolved) == false)
+				return(false);
+
+			$arrValues = $addon->getOriginalValues();
+
+			if(empty($arrValues))
+				$arrValues = array();
+
+			foreach($arrResolved as $key => $val){
+
+				if($key === '__dynamic__')
+					continue;
+
+				$arrValues[$key] = $val;
+			}
+
+			$addon->setParamsValues($arrValues);
+
+			return(true);
+
+		}finally{
+
+			if($switchedDocument == true && $previousDocument !== null && class_exists('\ElementorPro\Plugin')){
+
+				\ElementorPro\Plugin::elementor()->documents->switch_to_document($previousDocument);
+			}
+		}
+	}
 	
 	
 	/**
@@ -1766,8 +1838,10 @@ class UniteCreatorElementorIntegrate{
     	self::$isEditMode = HelperUC::isEditMode();
 		
     	//if turn it on - please do good QA - it's for saving resources on save builder action
-    	//self::$isSaveBuilderMode = $this->isSaveBuilderAction();
+    	self::$isSaveBuilderMode = $this->isSaveBuilderAction();
 		
+    	GlobalsUC::$isSaveBuilderMode = self::$isSaveBuilderMode;
+    	
     	GlobalsProviderUC::$isInsideEditor = self::$isEditMode;
 		
     	$arrSettingsValues = HelperProviderCoreUC_EL::getGeneralSettingsValues();
@@ -1847,17 +1921,20 @@ class UniteCreatorElementorIntegrate{
 
 		//wpml translation integrattion
 
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 		add_filter( 'wpml_elementor_widgets_to_translate', array( $this, 'onWpmlTranslateRegister' ) );
 
 		//get current dynamic settings from loop
 
-		add_filter( 'ue_get_current_widget_settings', array( $this, 'onGetCurrentRenderingWidgetSettings' ) );
+		add_filter( 'uelm_get_current_widget_settings', array( $this, 'onGetCurrentRenderingWidgetSettings' ) );
 		
 		
     	// ------ admin related only ----------
 
     	if(is_admin() == false)
     		return(false);
+
+    	add_filter("elementor/template_library/sources/local/import/elements", array("UELM_CreatorElementorWidget", "restoreImportAssetUrls"));
 
     	if($this->enableExportTemplate == true){
 
@@ -1870,6 +1947,7 @@ class UniteCreatorElementorIntegrate{
     	//import tepmlate
     	if($this->enableImportTemplate == true){
 
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 			add_action( 'admin_footer', array($this, 'onAdminFooter') );
 			add_action( 'admin_enqueue_scripts', array($this, 'onAddScripts') );
 

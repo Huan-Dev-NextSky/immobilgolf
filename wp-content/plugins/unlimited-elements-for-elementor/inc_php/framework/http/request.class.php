@@ -13,6 +13,8 @@ class UEHttpRequest{
 	const METHOD_POST = "POST";
 
 	const REQUEST_TIMEOUT = 120;
+	const LAST_GOOD_CACHE_TIME = 2592000; // 30 days
+	const FAILURE_COOLDOWN_TIME = 300; // 5 minutes
 
 	private $debug = false;
 	private $cacheTime = 0;
@@ -206,27 +208,50 @@ class UEHttpRequest{
 		$body = $this->prepareBody($method);
 		$url = $this->prepareUrl($url, $query);
 		
+		if(UniteFunctionsUC::isLocalUrl($url) == true){
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			throw new UEHttpRequestException("The URL is not allowed.", $this);
+		}
+		
 		if($this->isDebug() === true){
 			dmp("Request data:");
 			dmp($url);
 			dmp($headers);
 		}
-				
+		
 		$cacheKey = $this->prepareCacheKey($url, $body);
 		$cacheTime = $this->prepareCacheTime($method);
+		$lastGoodKey = $cacheKey . "_lastgood";
+		$cooldownKey = $cacheKey . "_cooldown";
 		
 		if($cacheTime > 0){
 			
 			$requestResponse = UniteProviderFunctionsUC::getTransient($cacheKey);
 			
 			if(!empty($requestResponse)){
-								
-				if($this->isDebug() == true){
-					dmp("get the response from cache");
-					$this->printResponseDebug($requestResponse);
+				
+				$cachedBody = UniteFunctionsUC::getVal($requestResponse, "body");
+				
+				if($this->isCacheableResponseBody($cachedBody) === true){
+					
+					if($this->isDebug() == true){
+						dmp("get the response from cache");
+						$this->printResponseDebug($requestResponse);
+					}
+					
+					return new UEHttpResponse($requestResponse);
 				}
 				
-				return new UEHttpResponse($requestResponse);
+				delete_transient($cacheKey);
+			}
+			
+			// Recently failed? Serve last good without touching the API.
+			if(UniteProviderFunctionsUC::getTransient($cooldownKey) !== false){
+				
+				$lastGoodResponse = $this->getLastGoodHttpResponse($lastGoodKey);
+				
+				if($lastGoodResponse !== null)
+					return $lastGoodResponse;
 			}
 			
 		}
@@ -236,18 +261,38 @@ class UEHttpRequest{
 				"headers" => $headers,
 				"body" => $body,
 				"timeout" => self::REQUEST_TIMEOUT,
-				"sslverify" => false
+				"sslverify" => true,
+				"reject_unsafe_urls" => true
 		);
 
 		if($this->isDebug() === true){
 			dmp("do the request!");
 		}
+
+		$filterCallback = function($preempt, $args, $requestUrl){
+			if(UniteFunctionsUC::isLocalUrl($requestUrl) == true)
+				return new WP_Error("http_request_rejected", "The URL is not allowed.");
+			return $preempt;
+		};
+
+		add_filter("pre_http_request", $filterCallback, 10, 3);
+
+		try{
+			$wpResponse = wp_remote_request($url, $arrRequest);
+		}finally{
+			remove_filter("pre_http_request", $filterCallback, 10);
+		}
 		
-		$wpResponse = wp_remote_request($url, $arrRequest);
-		
-		if(is_wp_error($wpResponse) === true)
+		if(is_wp_error($wpResponse) === true){
+			
+			$lastGoodResponse = $this->serveLastGoodAfterFailure($cacheTime, $cooldownKey, $lastGoodKey);
+			
+			if($lastGoodResponse !== null)
+				return $lastGoodResponse;
+			
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 			throw new UEHttpRequestException($wpResponse->get_error_message(), $this);
+		}
 
 		$status = wp_remote_retrieve_response_code($wpResponse);
 		$headers = wp_remote_retrieve_headers($wpResponse);
@@ -259,6 +304,9 @@ class UEHttpRequest{
 			"body" => $body,
 		);
 		
+		// Save request to changelog (only actual requests, not from cache)
+		$this->saveRequestToChangelog($url);
+		
 		//validation
 		
 		if(is_callable($this->validateResponse) === true){
@@ -266,9 +314,16 @@ class UEHttpRequest{
 			$response = new UEHttpResponse($requestResponse);
 			$validResponse = call_user_func($this->validateResponse, $response);
 
-			if($validResponse === false)
+			if($validResponse === false){
+				
+				$lastGoodResponse = $this->serveLastGoodAfterFailure($cacheTime, $cooldownKey, $lastGoodKey);
+				
+				if($lastGoodResponse !== null)
+					return $lastGoodResponse;
+				
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 				throw new UEHttpResponseException("Response validation failed.", $response);
+			}
 		}
 			
 		//show debug
@@ -287,9 +342,21 @@ class UEHttpRequest{
 			
 			$cacheTime = 10;
 		}
-
-		if($cacheTime > 0)
+		
+		if($cacheTime > 0 && $this->isCacheableResponseBody($body) === true){
+			
 			UniteProviderFunctionsUC::setTransient($cacheKey, $requestResponse, $cacheTime);
+			
+			if(empty($body) === false)
+				UniteProviderFunctionsUC::setTransient($lastGoodKey, $requestResponse, self::LAST_GOOD_CACHE_TIME);
+			
+		}elseif($cacheTime > 0){
+			
+			$lastGoodResponse = $this->serveLastGoodAfterFailure($cacheTime, $cooldownKey, $lastGoodKey);
+			
+			if($lastGoodResponse !== null)
+				return $lastGoodResponse;
+		}
 		
 		return new UEHttpResponse($requestResponse);
 	}
@@ -380,6 +447,72 @@ class UEHttpRequest{
 	}
 
 	/**
+	 * Check if the response body should be cached (skip API error payloads).
+	 *
+	 * @param string $body
+	 *
+	 * @return bool
+	 */
+	private function isCacheableResponseBody($body){
+		
+		if(empty($body))
+			return true;
+		
+		$data = UniteFunctionsUC::maybeJsonDecode($body);
+		
+		if(is_array($data) === false)
+			return true;
+		
+		$error = UniteFunctionsUC::getVal($data, "error");
+		
+		if(!empty($error))
+			return false;
+		
+		return true;
+	}
+
+	/**
+	 * Get the long-lived last-good cached response, if any.
+	 *
+	 * @param string $lastGoodKey
+	 *
+	 * @return UEHttpResponse|null
+	 */
+	private function getLastGoodHttpResponse($lastGoodKey){
+
+		$lastGood = UniteProviderFunctionsUC::getTransient($lastGoodKey);
+
+		if(empty($lastGood))
+			return null;
+
+		if($this->isDebug() === true){
+			dmp("get the response from last-good cache");
+			$this->printResponseDebug($lastGood);
+		}
+
+		return new UEHttpResponse($lastGood);
+	}
+
+	/**
+	 * After a failed/error response: set a short cooldown and try last-good.
+	 *
+	 * @param int $cacheTime
+	 * @param string $cooldownKey
+	 * @param string $lastGoodKey
+	 *
+	 * @return UEHttpResponse|null
+	 */
+	private function serveLastGoodAfterFailure($cacheTime, $cooldownKey, $lastGoodKey){
+
+		if($cacheTime <= 0)
+			return null;
+
+		UniteProviderFunctionsUC::setTransient($cooldownKey, 1, self::FAILURE_COOLDOWN_TIME);
+
+		return $this->getLastGoodHttpResponse($lastGoodKey);
+	}
+
+	/**
 	 * Prepare the cache key for the request.
 	 *
 	 * @param string $url
@@ -392,6 +525,12 @@ class UEHttpRequest{
 		
 		if(!empty($body)){
 			$text .= UniteFunctionsUC::encodeContent($body);
+		}
+		
+		// Include cache time in the key so when cache time setting changes, 
+		// the transient key changes and fresh data is fetched
+		if($this->cacheTime > 0){
+			$text .= ":cache_time:" . $this->cacheTime;
 		}
 			
 		$key = self::CACHE_KEY . ":" . md5($text);
@@ -409,6 +548,29 @@ class UEHttpRequest{
 	private function prepareCacheTime($method){
 
 		return ($method === self::METHOD_GET) ? $this->cacheTime : 0;
+	}
+
+	/**
+	 * Save request to changelog.
+	 * Only saves actual requests, not requests served from cache.
+	 *
+	 * @param string $url
+	 *
+	 * @return void
+	 */
+	private function saveRequestToChangelog($url){
+
+		try{
+
+			$isChangelogEnabled = HelperProviderUC::isAddonChangelogEnabled();
+			if($isChangelogEnabled === false)
+				return;
+
+			$changelog = new UniteCreatorAddonChangelog();
+			$changelog->saveRequest($url);
+		}catch(Exception $exception){
+			// Silently fail - don't interrupt the request if logging fails
+		}
 	}
 
 }

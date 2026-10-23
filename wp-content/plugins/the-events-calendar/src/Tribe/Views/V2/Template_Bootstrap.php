@@ -178,6 +178,7 @@ class Template_Bootstrap {
 	 * Fetches the HTML for the Single Event page using the legacy view system
 	 *
 	 * @since  4.9.4
+	 * @since 6.17.4.1 Block parsing is left to the content filters, so it no longer runs over the full page buffer.
 	 *
 	 * @return string
 	 */
@@ -210,11 +211,38 @@ class Template_Bootstrap {
 
 		$html = ob_get_clean();
 
-		if ( function_exists( 'do_blocks' ) ) {
-			$html = do_blocks( $html );
-		}
-
 		return $html;
+	}
+
+	/**
+	 * Whether the current view will render the single-event template.
+	 *
+	 * @since 6.17.5
+	 *
+	 * @return bool Whether to render a single event instead of an archive.
+	 */
+	public function should_display_single() {
+		$query     = tribe_get_global_query_object();
+		$context   = tribe_context();
+		$view_slug = $context->get( 'event_display' );
+
+		$should_display_single = (
+			$this->is_single_event()
+			&& ! tribe_is_showing_all()
+			&& ! is_embed()
+		);
+
+		/**
+		 * Filters when we display the single for events.
+		 *
+		 * @since 5.0.0
+		 *
+		 * @param boolean         $should_display_single  If we are currently going to display single.
+		 * @param string          $view_slug              The slug of the View that will be built, based on the context.
+		 * @param \WP_Query       $query                  The current WP Query object.
+		 * @param \Tribe__Context $context                Tribe context used to setup the view.
+		 */
+		return (bool) apply_filters( 'tribe_events_views_v2_bootstrap_should_display_single', $should_display_single, $view_slug, $query, $context );
 	}
 
 	/**
@@ -263,23 +291,7 @@ class Template_Bootstrap {
 			return $pre_html;
 		}
 
-		$should_display_single = (
-			$this->is_single_event()
-			&& ! tribe_is_showing_all()
-			&& ! is_embed()
-		);
-
-		/**
-		 * Filters when we display the single for events.
-		 *
-		 * @since 5.0.0
-		 *
-		 * @param boolean         $should_display_single  If we are currently going to display single.
-		 * @param string          $view_slug              The slug of the View that will be built, based on the context.
-		 * @param \Tribe__Context $context                Tribe context used to setup the view.
-		 * @param \WP_Query       $query                  The current WP Query object.
-		 */
-		$should_display_single = apply_filters( 'tribe_events_views_v2_bootstrap_should_display_single', $should_display_single, $view_slug, $query, $context );
+		$should_display_single = $this->should_display_single();
 
 		if ( $should_display_single ) {
 			$html = $this->get_v1_single_event_html();
@@ -312,7 +324,6 @@ class Template_Bootstrap {
 
 			$html = View::make( $view_slug, $context )->get_html();
 		}
-
 
 		/**
 		 * Filters the HTML for the view before we do any other logic around that.
@@ -557,4 +568,38 @@ class Template_Bootstrap {
 		return $theme_file;
 	}
 
+	/**
+	 * Wraps the view HTML in a main landmark for accessibility if not already wrapped.
+	 *
+	 * This ensures that even when themes override the default-template.php,
+	 * the content is still wrapped in a proper main landmark element.
+	 *
+	 * @since 6.15.12
+	 * @since 6.15.12.2 Changed the approach to inject the `role` attribute to the first element in the HTML instead of wrapping the entire HTML in a main element.
+	 *
+	 * @param string $html The HTML output from the view.
+	 *
+	 * @return string The HTML, wrapped in a main landmark if needed.
+	 */
+	public function maybe_add_main_landmark( $html ) {
+		// Don't add a landmark if we're doing an AJAX request or if this is embed content.
+		if ( is_embed() || tribe_context()->doing_ajax() ) {
+			return $html;
+		}
+
+		$cache = tribe_cache();
+
+		if ( ! empty( $cache['tec_events_views_v2_main_landmark_added'] ) ) {
+			return $html;
+		}
+
+		$cache['tec_events_views_v2_main_landmark_added'] = true;
+
+		if ( strstr( $html, 'role="main"' ) ) {
+			// A main role is already present.
+			return $html;
+		}
+
+		return preg_replace( '/<(\w+)([^>]*)>/', '<$1$2 role="main">', $html, 1 );
+	}
 }

@@ -8,7 +8,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-class UniteCreatorAddonDefaultsView{
+class UELM_CreatorAddonDefaultsView{
 
 	protected $showToolbar = true;
 	protected $showHeader = true;
@@ -94,11 +94,11 @@ class UniteCreatorAddonDefaultsView{
 		$urlEditAddon = HelperUC::getViewUrl_EditAddon($addonID);
 
 		$arrOptions = $this->getOptions($addon);
-
+		
 		//init addon config
 		$addonConfig = new UniteCreatorAddonConfig();
 		$addonConfig->setStartAddon($addon);
-
+		
 		$this->isDataExists = $addon->isDefaultDataExists();
 
 		$isPreviewMode = UniteFunctionsUC::getGetVar("preview", "", UniteFunctionsUC::SANITIZE_KEY);
@@ -121,4 +121,6 @@ class UniteCreatorAddonDefaultsView{
 
 }
 
-new UniteCreatorAddonDefaultsView();
+new UELM_CreatorAddonDefaultsView();
+
+class_alias( UELM_CreatorAddonDefaultsView::class, 'UniteCreatorAddonDefaultsView' );

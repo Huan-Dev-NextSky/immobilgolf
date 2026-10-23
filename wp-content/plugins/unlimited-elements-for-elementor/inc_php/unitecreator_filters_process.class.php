@@ -71,9 +71,8 @@ class UniteCreatorFiltersProcess{
 		//get fields
 
 		$arrFields = UniteFunctionsUC::getVal($params, "fields");
-
+		
 		$arrFields = UniteFunctionsUC::getVal($arrFields, "fields_fields");
-
 
 		if(empty($arrFields))
 			$arrFields = array(
@@ -162,7 +161,7 @@ class UniteCreatorFiltersProcess{
 			$output[$type] = $title;
 		}
 
-
+		
 		return($output);
 	}
 
@@ -272,7 +271,7 @@ class UniteCreatorFiltersProcess{
 			if(self::$showDebug == true){
 				
 				dmp("error get terms");
-				dmp($args);
+				dmpHtml($args);
 				dmp($arrTerms);
 			}
 
@@ -323,9 +322,9 @@ class UniteCreatorFiltersProcess{
 	 */
 	private function getArrRequest(){
 		
-		$request = $_GET;
-		if(!empty($_POST))
-			$request = array_merge($request, $_POST);
+		$request = $_GET; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public filter query args. The values are parsed as listing filters, not saved.
+		if(!empty($_POST)) // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Public filter query args. The values are parsed as listing filters, not saved.
+			$request = array_merge($request, $_POST); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Public filter query args. The values are parsed as listing filters, not saved.
 		
 		//add from query vars:
 		
@@ -370,9 +369,9 @@ class UniteCreatorFiltersProcess{
 		}
 
 		//get the array
-
+		
 		$arrValues = $this->parseStrTerms_values($strValues);
-
+			
 		foreach($arrValues as $key => $value){
 
 			if(isset($arrReplace[$value])){
@@ -380,9 +379,10 @@ class UniteCreatorFiltersProcess{
 				$strGroupValue = $arrReplace[$value];
 
 				$arrGroupValue = $this->parseStrTerms_values($strGroupValue);
-
-				$arrGroupValue["relation"] = "OR";
-
+				
+				if(isset($arrGroupValue["relation"]) == false)
+					$arrGroupValue["relation"] = "OR";
+				
 				if(count($arrGroupValue) == 1)
 					$arrGroupValue = $arrGroupValue[0];
 
@@ -392,7 +392,7 @@ class UniteCreatorFiltersProcess{
 		}
 
 		$arrValues["relation"] = "AND";
-
+				
 		return($arrValues);
 	}
 
@@ -408,7 +408,7 @@ class UniteCreatorFiltersProcess{
 		if(strpos($strValues,"|") !== false){
 
 			$arrValues = $this->parseStrTerms_groups($strValues);
-
+			
 			return($arrValues);
 		}
 
@@ -424,6 +424,7 @@ class UniteCreatorFiltersProcess{
 
 		if($isTermsAnd == true)
 			$arrValues["relation"] = "AND";
+
 
 		return($arrValues);
 	}
@@ -495,9 +496,7 @@ class UniteCreatorFiltersProcess{
 			$arrValues = $this->parseStrTerms_values($strValues);
 
 			$arrTerms[$key] = $arrValues;
-
 		}
-
 
 		//show debug terms
 
@@ -518,17 +517,112 @@ class UniteCreatorFiltersProcess{
 		return($arrOutput);
 	}
 
+
+	/**
+	 * parse meta filters string
+	 * format: key:value1.value2;key2:value:notequals
+	 */
+	private function parseStrMeta($strFilters){
+
+		$arrUrlKeys = $this->getUrlPartsKeys();
+
+		$taxSapSign = UniteFunctionsUC::getVal($arrUrlKeys, "tax_sap");
+
+		if($taxSapSign != "~" && strpos($strFilters, "~") !== false)
+			$taxSapSign = "~";
+
+		$strFilters = trim($strFilters);
+
+		$arrFilters = explode(";", $strFilters);
+
+		$arrGroups = array();
+
+		foreach($arrFilters as $strFilter){
+
+			$strFilter = trim($strFilter);
+
+			if($strFilter === "")
+				continue;
+
+			$arrFilter = explode($taxSapSign, $strFilter);
+			$numParts = count($arrFilter);
+
+			if($numParts < 2)
+				continue;
+
+			$compare = "=";
+			$key = $arrFilter[0];
+			$strValues = $arrFilter[1];
+
+			if($numParts >= 3){
+
+				$lastPart = $arrFilter[$numParts - 1];
+				$compareFromWord = HelperProviderUC::getMetaCompareFromUrlWord($lastPart);
+
+				if($compareFromWord !== null){
+
+					$compare = $compareFromWord;
+
+					array_pop($arrFilter);
+					$key = array_shift($arrFilter);
+					$strValues = implode($taxSapSign, $arrFilter);
+				}else{
+					$key = $arrFilter[0];
+					$strValues = implode($taxSapSign, array_slice($arrFilter, 1));
+				}
+			}
+
+			$key = sanitize_key($key);
+
+			if(empty($key))
+				continue;
+
+			$arrValues = $this->parseStrTerms_values($strValues);
+
+			$groupKey = $key."\0".$compare;
+
+			if(isset($arrGroups[$groupKey])){
+
+				$existing = $arrGroups[$groupKey]["values"];
+				$relation = UniteFunctionsUC::getVal($arrValues, "relation");
+				$existingRelation = UniteFunctionsUC::getVal($existing, "relation");
+
+				if(isset($arrValues["relation"]))
+					unset($arrValues["relation"]);
+
+				foreach($arrValues as $val)
+					$existing[] = $val;
+
+				if($relation == "AND" || $existingRelation == "AND")
+					$existing["relation"] = "AND";
+
+				$arrGroups[$groupKey]["values"] = $existing;
+
+			}else{
+
+				$arrGroups[$groupKey] = array(
+					"key" => $key,
+					"compare" => $compare,
+					"values" => $arrValues,
+				);
+			}
+		}
+
+		return(array_values($arrGroups));
+	}
+
+
 	/**
 	 * get orderby input filter
 	 */
 	private function getArrInputFilters_getOrderby($arrOutput, $request){
-
+		
 		$orderby = UniteFunctionsUC::getVal($request, "ucorderby");
 		$orderby = UniteProviderFunctionsUC::sanitizeVar($orderby, UniteFunctionsUC::SANITIZE_KEY);
 
 		if(empty($orderby))
 			return($arrOutput);
-
+		
 		//check if valid
 		$arrOrderby = UniteFunctionsWPUC::getArrSortBy(true);
 
@@ -594,7 +688,10 @@ class UniteCreatorFiltersProcess{
 		$request = $this->getArrRequest();
 		
 		$strTerms = UniteFunctionsUC::getVal($request, "ucterms");
-				
+		
+		if($strTerms === "undefined:undefined")
+			$strTerms = null;
+		
 		$arrOutput = array();
 
 		//parse filters
@@ -605,7 +702,8 @@ class UniteCreatorFiltersProcess{
 
 			$arrOutput = $this->parseStrTerms($strTerms);
 		}
-
+		
+		
 		//page
 
 		$page = UniteFunctionsUC::getVal($request, "ucpage");
@@ -662,7 +760,7 @@ class UniteCreatorFiltersProcess{
 		//orderby
 
 		$arrOutput = $this->getArrInputFilters_getOrderby($arrOutput, $request);
-
+		
 		//orderdir
 
 		$orderDir = UniteFunctionsUC::getVal($request, "ucorderdir");
@@ -677,7 +775,7 @@ class UniteCreatorFiltersProcess{
 		//validation
 		if(!empty($titleStart)){
 			if(!UniteFunctionsUC::isAlphaNumeric($titleStart))
-				UniteFunctionsUC::throwError("Wrong title start: \"$titleStart\", please check the alphabit filter, should be some letter only");
+				UniteFunctionsUC::throwError("Wrong title start. please check the alphabit filter, should be some letter only");
 			
 			$arrOutput["titlestart"] = strtolower($titleStart);
 		}
@@ -693,8 +791,43 @@ class UniteCreatorFiltersProcess{
 				$arrOutput["maintermid"] = $mainTermID;
 		}
 		
-		self::$arrInputFiltersCache = $arrOutput;
+		//authors
+		$strAuthors = UniteFunctionsUC::getVal($request, "ucauthors");
+		$strAuthors = UniteProviderFunctionsUC::sanitizeVar($strAuthors, UniteFunctionsUC::SANITIZE_TEXT_FIELD);
+		
+		if(!empty($strAuthors)){
+			//validate IDs list
+			UniteFunctionsUC::validateIDsList($strAuthors, "authors list");
 			
+			//parse comma-separated IDs
+			$arrAuthorIDs = UniteFunctionsUC::csvToArray($strAuthors);
+			
+			if(!empty($arrAuthorIDs)){
+				$arrAuthorIDs = array_unique($arrAuthorIDs);
+				$arrOutput["authors"] = $arrAuthorIDs;
+			}
+		}
+
+		//meta - key:value or key:value:compare
+		$strMeta = UniteFunctionsUC::getVal($request, "ucmeta");
+
+		if($strMeta === "undefined:undefined")
+			$strMeta = null;
+
+		if(!empty($strMeta)){
+
+			if(self::$showDebug == true)
+				dmp("input meta filters found: $strMeta");
+
+			$arrMeta = $this->parseStrMeta($strMeta);
+
+			if(!empty($arrMeta))
+				$arrOutput["meta"] = $arrMeta;
+		}
+		
+		self::$arrInputFiltersCache = $arrOutput;
+		
+		
 		return($arrOutput);
 	}
 
@@ -795,6 +928,18 @@ class UniteCreatorFiltersProcess{
 		if(!empty($mainTermID))
 			self::$filters["maintermid"] = $mainTermID;
 		
+		//authors
+		$arrAuthors = UniteFunctionsUC::getVal($arrInputFilters, "authors");
+
+		if(!empty($arrAuthors) && is_array($arrAuthors))
+			self::$filters["authors"] = $arrAuthors;
+
+		//meta
+		$arrMeta = UniteFunctionsUC::getVal($arrInputFilters, "meta");
+
+		if(!empty($arrMeta) && is_array($arrMeta))
+			self::$filters["meta"] = $arrMeta;
+		
 				
 		return(self::$filters);
 	}
@@ -855,19 +1000,14 @@ class UniteCreatorFiltersProcess{
 		foreach($arrTax as $taxonomy=>$arrTerms){
 
 			$relation = UniteFunctionsUC::getVal($arrTerms, "relation");
-
+			
 			if($relation == "AND"){		//multiple
 
 				unset($arrTerms["relation"]);
 
 				foreach($arrTerms as $term){
-
-					$item = array();
-					$item["taxonomy"] = $taxonomy;
-					$item["field"] = "slug";
-					$item["terms"] = $term;
-
-					$arrQuery[] = $item;
+					$arrTermItems = $this->getTaxQuery_getTermItems($taxonomy, $term);
+					$arrQuery = array_merge($arrQuery, $arrTermItems);
 				}
 
 			}else{		//single  (or)
@@ -876,7 +1016,7 @@ class UniteCreatorFiltersProcess{
 				$item["taxonomy"] = $taxonomy;
 				$item["field"] = "slug";
 				$item["terms"] = $arrTerms;
-
+					
 				$arrQuery[] = $item;
 			}
 
@@ -886,6 +1026,429 @@ class UniteCreatorFiltersProcess{
 
 		return($arrQuery);
 	}
+
+
+	/**
+	 * get tax query items from parsed term (slug string or nested group array)
+	 */
+	private function getTaxQuery_getTermItems($taxonomy, $term){
+
+		if(is_array($term) == false){
+			return(array(
+				array(
+					"taxonomy" => $taxonomy,
+					"field" => "slug",
+					"terms" => $term,
+				)
+			));
+		}
+
+		$innerRelation = UniteFunctionsUC::getVal($term, "relation");
+
+		if($innerRelation == "AND"){
+			unset($term["relation"]);
+
+			$arrItems = array();
+
+			foreach($term as $subTerm){
+				$arrSubItems = $this->getTaxQuery_getTermItems($taxonomy, $subTerm);
+				$arrItems = array_merge($arrItems, $arrSubItems);
+			}
+
+			return($arrItems);
+		}
+
+		if(isset($term["relation"]))
+			unset($term["relation"]);
+
+		return(array(
+			array(
+				"taxonomy" => $taxonomy,
+				"field" => "slug",
+				"terms" => array_values($term),
+			)
+		));
+	}
+
+	/**
+	 * get meta query from parsed meta filters (same structure as terms)
+	 * arrMeta = list of groups: [{key, compare, values}]
+	 * old format also supported: [meta_key => [value1, value2, "relation"=>"AND"]]
+	 */
+	private function getMetaQuery($arrMeta){
+
+		if(empty($arrMeta) || is_array($arrMeta) == false)
+			return(array());
+
+		$arrMeta = $this->normalizeMetaFilterGroups($arrMeta);
+
+		$arrQuery = array();
+
+		foreach($arrMeta as $group){
+
+			$arrClauses = $this->getMetaQuery_getGroupClauses($group);
+			$arrClauses = $this->wrapNotCompareClauses($arrClauses);
+
+			if(empty($arrClauses))
+				continue;
+
+			foreach($arrClauses as $clause)
+				$arrQuery[] = $clause;
+		}
+
+		if(count($arrQuery) > 1)
+			$arrQuery["relation"] = "AND";
+
+		return($arrQuery);
+	}
+
+
+	/**
+	 * convert old key=>values meta filters to group list
+	 */
+	private function normalizeMetaFilterGroups($arrMeta){
+
+		$first = reset($arrMeta);
+
+		if(is_array($first) && isset($first["key"]))
+			return($arrMeta);
+
+		$arrGroups = array();
+
+		foreach($arrMeta as $metaKey => $arrValues){
+
+			$arrGroups[] = array(
+				"key" => $metaKey,
+				"compare" => "=",
+				"values" => $arrValues,
+			);
+		}
+
+		return($arrGroups);
+	}
+
+
+	/**
+	 * != / NOT IN / NOT LIKE only match rows that have the meta key.
+	 * Include posts where the key is missing as well.
+	 */
+	private function wrapNotCompareClauses($arrClauses){
+
+		if(empty($arrClauses) || is_array($arrClauses) == false)
+			return($arrClauses);
+
+		$arrNotCompares = array("!=", "NOT IN", "NOT LIKE", "NOT BETWEEN");
+		$arrOut = array();
+
+		foreach($arrClauses as $clause){
+
+			if(is_array($clause) == false){
+				$arrOut[] = $clause;
+				continue;
+			}
+
+			if(isset($clause["relation"])){
+				$arrOut[] = $clause;
+				continue;
+			}
+
+			$compare = UniteFunctionsUC::getVal($clause, "compare");
+			$metaKey = UniteFunctionsUC::getVal($clause, "key");
+
+			if(empty($metaKey) || in_array($compare, $arrNotCompares) == false){
+				$arrOut[] = $clause;
+				continue;
+			}
+
+			$arrOut[] = array(
+				$clause,
+				array(
+					"key" => $metaKey,
+					"compare" => "NOT EXISTS",
+				),
+				"relation" => "OR",
+			);
+		}
+
+		return($arrOut);
+	}
+
+
+	/**
+	 * true if all values look numeric
+	 */
+	private function isMetaFilterValueNumeric($value){
+
+		if(is_array($value)){
+
+			if(empty($value))
+				return(false);
+
+			foreach($value as $item){
+
+				if($item === "" || is_numeric($item) == false)
+					return(false);
+			}
+
+			return(true);
+		}
+
+		if($value === "" || $value === null)
+			return(false);
+
+		return(is_numeric($value));
+	}
+
+
+	/**
+	 * add NUMERIC type when values are numbers
+	 */
+	private function addMetaQueryTypeIfNumeric($arrItem, $value){
+
+		$compare = UniteFunctionsUC::getVal($arrItem, "compare");
+
+		$arrSkip = array("LIKE", "NOT LIKE", "EXISTS", "NOT EXISTS");
+
+		if(in_array($compare, $arrSkip) == true)
+			return($arrItem);
+
+		if($this->isMetaFilterValueNumeric($value) == true)
+			$arrItem["type"] = "NUMERIC";
+
+		return($arrItem);
+	}
+
+
+	/**
+	 * explode comma lists for IN / BETWEEN compares
+	 */
+	private function expandMetaFilterArrayValues($arrValues, $compare){
+
+		$arrArrayCompares = array("IN", "NOT IN", "BETWEEN", "NOT BETWEEN");
+
+		if(in_array($compare, $arrArrayCompares) == false)
+			return($arrValues);
+
+		$arrOut = array();
+
+		foreach($arrValues as $val){
+
+			if(strpos($val, ",") !== false){
+
+				$arrParts = explode(",", $val);
+
+				foreach($arrParts as $part){
+
+					$part = trim($part);
+
+					if($part !== "")
+						$arrOut[] = $part;
+				}
+
+			}else{
+				$arrOut[] = $val;
+			}
+		}
+
+		return($arrOut);
+	}
+
+
+	/**
+	 * build meta_query clauses for one key+compare group
+	 */
+	private function getMetaQuery_getGroupClauses($group){
+
+		$metaKey = UniteFunctionsUC::getVal($group, "key");
+		$compare = UniteFunctionsUC::getVal($group, "compare", "=");
+		$arrValues = UniteFunctionsUC::getVal($group, "values");
+
+		$metaKey = sanitize_key($metaKey);
+
+		if(empty($metaKey))
+			return(array());
+
+		$arrAllowed = array_keys(HelperProviderUC::getArrMetaCompareSelect());
+
+		if(in_array($compare, $arrAllowed) == false)
+			$compare = "=";
+
+		if($compare == "EXISTS" || $compare == "NOT EXISTS"){
+
+			return(array(
+				array(
+					"key" => $metaKey,
+					"compare" => $compare,
+				)
+			));
+		}
+
+		$relation = null;
+
+		if(is_array($arrValues) && isset($arrValues["relation"])){
+
+			$relation = $arrValues["relation"];
+			unset($arrValues["relation"]);
+		}
+
+		if(is_array($arrValues) == false)
+			$arrValues = array($arrValues);
+
+		$arrCleanValues = array();
+
+		foreach($arrValues as $metaValue){
+
+			if(is_array($metaValue))
+				continue;
+
+			$metaValue = sanitize_text_field($metaValue);
+
+			if($metaValue === "" || $metaValue === null)
+				continue;
+
+			$arrCleanValues[] = $metaValue;
+		}
+
+		if(empty($arrCleanValues))
+			return(array());
+
+		$arrCleanValues = $this->expandMetaFilterArrayValues($arrCleanValues, $compare);
+
+		// Do not wrap LIKE values with %. WP_Meta_Query already does
+		// '%' . esc_like($value) . '%'. Extra % become literal \% and match nothing.
+		if($compare == "LIKE" || $compare == "NOT LIKE"){
+
+			foreach($arrCleanValues as $index => $val){
+				$arrCleanValues[$index] = trim($val, "%");
+			}
+		}
+
+		$needArrayValue = in_array($compare, array("IN", "NOT IN", "BETWEEN", "NOT BETWEEN"));
+
+		if($needArrayValue == true){
+
+			if($compare == "BETWEEN" || $compare == "NOT BETWEEN"){
+
+				if(count($arrCleanValues) < 2)
+					return(array());
+
+				$value = array($arrCleanValues[0], $arrCleanValues[1]);
+			}else{
+				$value = $arrCleanValues;
+			}
+
+			$arrItem = array(
+				"key" => $metaKey,
+				"value" => $value,
+				"compare" => $compare,
+			);
+
+			$arrItem = $this->addMetaQueryTypeIfNumeric($arrItem, $value);
+
+			return(array($arrItem));
+		}
+
+		if($relation == "AND"){
+
+			$arrClauses = array();
+
+			foreach($arrCleanValues as $metaValue){
+
+				$arrItem = array(
+					"key" => $metaKey,
+					"value" => $metaValue,
+					"compare" => $compare,
+				);
+
+				$arrClauses[] = $this->addMetaQueryTypeIfNumeric($arrItem, $metaValue);
+			}
+
+			return($arrClauses);
+		}
+
+		if($compare == "="){
+
+			if(count($arrCleanValues) == 1){
+
+				$arrItem = array(
+					"key" => $metaKey,
+					"value" => $arrCleanValues[0],
+					"compare" => "=",
+				);
+
+				$arrItem = $this->addMetaQueryTypeIfNumeric($arrItem, $arrCleanValues[0]);
+
+				return(array($arrItem));
+			}
+
+			$arrItem = array(
+				"key" => $metaKey,
+				"value" => $arrCleanValues,
+				"compare" => "IN",
+			);
+
+			$arrItem = $this->addMetaQueryTypeIfNumeric($arrItem, $arrCleanValues);
+
+			return(array($arrItem));
+		}
+
+		if($compare == "!="){
+
+			if(count($arrCleanValues) == 1){
+
+				$arrItem = array(
+					"key" => $metaKey,
+					"value" => $arrCleanValues[0],
+					"compare" => "!=",
+				);
+
+				$arrItem = $this->addMetaQueryTypeIfNumeric($arrItem, $arrCleanValues[0]);
+
+				return(array($arrItem));
+			}
+
+			$arrItem = array(
+				"key" => $metaKey,
+				"value" => $arrCleanValues,
+				"compare" => "NOT IN",
+			);
+
+			$arrItem = $this->addMetaQueryTypeIfNumeric($arrItem, $arrCleanValues);
+
+			return(array($arrItem));
+		}
+
+		if(count($arrCleanValues) == 1){
+
+			$arrItem = array(
+				"key" => $metaKey,
+				"value" => $arrCleanValues[0],
+				"compare" => $compare,
+			);
+
+			$arrItem = $this->addMetaQueryTypeIfNumeric($arrItem, $arrCleanValues[0]);
+
+			return(array($arrItem));
+		}
+
+		$arrSub = array();
+
+		foreach($arrCleanValues as $metaValue){
+
+			$arrItem = array(
+				"key" => $metaKey,
+				"value" => $metaValue,
+				"compare" => $compare,
+			);
+
+			$arrSub[] = $this->addMetaQueryTypeIfNumeric($arrItem, $metaValue);
+		}
+
+		$arrSub["relation"] = "OR";
+
+		return(array($arrSub));
+	}
+
 
 	/**
 	 * remove "not in" tax query
@@ -920,7 +1483,7 @@ class UniteCreatorFiltersProcess{
 		
 		if(empty($arrTaxQuery) && self::$isModeReplace == false)
 			return($args);
-
+				
 		$existingTaxQuery = UniteFunctionsUC::getVal($args, "tax_query");
 				
 		//if replace terms mode - just delete the existing tax query
@@ -968,9 +1531,9 @@ class UniteCreatorFiltersProcess{
 		
 		if($isFilterable == false)
 			return($args);
-
+					
 		$arrFilters = $this->getRequestFilters();
-				
+		
 		$arrMetaQuery = array();
 	
 		//---- set offset and count ----
@@ -986,6 +1549,8 @@ class UniteCreatorFiltersProcess{
 		$priceTo = UniteFunctionsUC::getVal($arrFilters, "price_to");
 		$titleStart = UniteFunctionsUC::getVal($arrFilters, "titlestart");
 		$mainTermID = UniteFunctionsUC::getVal($arrFilters, "maintermid");
+		$arrAuthors = UniteFunctionsUC::getVal($arrFilters, "authors");
+		$arrMeta = UniteFunctionsUC::getVal($arrFilters, "meta");
 		
 		
 		if(!empty($page))
@@ -1055,21 +1620,24 @@ class UniteCreatorFiltersProcess{
 		if(!empty($orderdir) && $orderdir != "default"){
 			$args["order"] = strtoupper($orderdir);
 		}
-
-
+		
 		$arrTerms = UniteFunctionsUC::getVal($arrFilters, "terms");
 		
-		//if mode init - the filters should be set by "all" the posts set, not by the selected ones.
-				
-		if(self::$isModeInit == false){	
-						
+		//if mode init - the filters should be set by "all". unless there are selected terms
+		//the posts set, not by the selected ones.
+
+		$strSelectedTermIDs = UniteFunctionsUC::getPostGetVariable("ucinitselectedterms","",UniteFunctionsUC::SANITIZE_TEXT_FIELD);
+		
+		if(self::$isModeInit == false || 
+		   self::$isModeInit == true && !empty($strSelectedTermIDs) ){	
+			
 			//combine the tax queries
 			$arrTaxQuery = $this->getTaxQuery($arrTerms);
 			
 			$args = $this->setArgsTaxQuery($args, $arrTaxQuery);
-			
 		}
-
+		
+		
 		//exclude
 		if(!empty($exclude)){
 
@@ -1084,7 +1652,7 @@ class UniteCreatorFiltersProcess{
 
 			$arrNotIn = array_merge($arrNotIn, $arrExclude);
 
-			$args["post__not_in"] = $arrExclude;
+			$args["post__not_in"] = $arrNotIn;
 
 		}
 
@@ -1117,6 +1685,32 @@ class UniteCreatorFiltersProcess{
                 'type' => 'NUMERIC'
         	);
 		}
+
+		//meta filter - groups of key / compare / values
+		if(!empty($arrMeta) && is_array($arrMeta)){
+
+			$arrMetaFromFilter = $this->getMetaQuery($arrMeta);
+
+			if(!empty($arrMetaFromFilter)){
+
+				$relation = UniteFunctionsUC::getVal($arrMetaFromFilter, "relation");
+
+				if(isset($arrMetaFromFilter["relation"]))
+					unset($arrMetaFromFilter["relation"]);
+
+				if(count($arrMetaFromFilter) == 1){
+
+					$arrMetaQuery[] = $arrMetaFromFilter[0];
+
+				}elseif(count($arrMetaFromFilter) > 1){
+
+					if(!empty($relation))
+						$arrMetaFromFilter["relation"] = $relation;
+
+					$arrMetaQuery[] = $arrMetaFromFilter;
+				}
+			}
+		}
 		
 
 		//set the meta query
@@ -1137,13 +1731,35 @@ class UniteCreatorFiltersProcess{
 			add_filter( 'posts_where', array($this,'setWhereTitleStart'), 10, 2 );
 		}
 		
+		//authors filter
+		if(!empty($arrAuthors) && is_array($arrAuthors)){
+			
+			$arrAuthorIDs = array();
+			
+			foreach($arrAuthors as $authorID){
+				$authorID = (int)$authorID;
+				if($authorID > 0)
+					$arrAuthorIDs[] = $authorID;
+			}
+			
+			if(!empty($arrAuthorIDs)){
+				
+				//if author__in already exists, merge with existing IDs
+				if(isset($args["author__in"]) && is_array($args["author__in"])){
+					$arrAuthorIDs = array_merge($args["author__in"], $arrAuthorIDs);
+					$arrAuthorIDs = array_unique($arrAuthorIDs);
+				}
+				
+				$args["author__in"] = $arrAuthorIDs;
+			}
+		}
 		
 		//set the title start
 		
 		if(self::$showDebug == true){
 
 			dmp("args:");
-			dmp($args);
+			dmpHtml($args);
 
 			dmp("filters:");
 			dmp($arrFilters);
@@ -1200,7 +1816,7 @@ class UniteCreatorFiltersProcess{
 		
 		if(self::$showDebug == true){
 			dmp("--- Last Query Args:");
-			dmp($args);
+			dmpHtml($args);
 		}
 			
 		$query = new WP_Query($args);
@@ -1464,7 +2080,7 @@ class UniteCreatorFiltersProcess{
 
 		$currentUrl = GlobalsUC::$current_page_url;
 
-		$arrUrl = parse_url($currentUrl);
+		$arrUrl = wp_parse_url($currentUrl);
 
 		$query = "?".UniteFunctionsUC::getVal($arrUrl, "query");
 
@@ -1636,6 +2252,15 @@ class UniteCreatorFiltersProcess{
 		}
 
 		$addon->setParamsValues($arrSettingsValues);
+
+		if(GlobalsProviderUC::$isUnderAjax == true && self::$isGutenberg == false
+			&& class_exists("UniteCreatorElementorIntegrate") && $addon->hasElementorDynamicSettings() == true){
+
+			$layoutID = UniteFunctionsUC::getPostGetVariable("layoutid", "", UniteFunctionsUC::SANITIZE_KEY);
+
+			$objElIntegrate = new UniteCreatorElementorIntegrate();
+			$objElIntegrate->mergeElementorDynamicSettingsIntoAddon($addon, $layoutID);
+		}
 		
 		//init the ajax search object to modify the post search list, if available
 		if(GlobalsProviderUC::$isUnderAjaxSearch){
@@ -1859,20 +2484,114 @@ class UniteCreatorFiltersProcess{
 		return($arrTermsAssoc);
 	}
 
+
+	/**
+	 * get init filtres author request
+	 */
+	private function getInitFiltersAuthorRequest($request, $strTestIDs){
+
+		if(strpos($request, "WHERE 1=2") !== false)
+			return("");
+		
+		//trim the limit
+		
+		$posLimit = strpos($request, "LIMIT");
+
+		if($posLimit){
+			$request = substr($request, 0, $posLimit-1);
+			$request = trim($request);
+		}
+
+		//remove the calc found rows
+
+		$request = str_replace("SQL_CALC_FOUND_ROWS", "", $request);
+
+		$prefix = UniteProviderFunctionsUC::$tablePrefix;
+
+		$request = str_replace($prefix."posts.*", $prefix."posts.id", $request);
+
+		//wrap it in get author id's request
+		
+		$arrAuthorIDs = UniteFunctionsUC::csvToArray($strTestIDs);
+		
+		if(empty($arrAuthorIDs))
+			return("");
+
+		$selectAuthors = "";
+		$selectTop = "";
+
+		$query = "SELECT \n";
+
+		foreach($arrAuthorIDs as $authorID){
+			
+			if(empty($authorID))
+				continue;	
+			
+			if(!empty($selectAuthors)){
+				$selectAuthors .= ",\n";
+				$selectTop .= ",\n";
+			}
+
+			$name = "author_$authorID";
+			
+			$selectAuthors .= "SUM(if(p.`post_author` = $authorID, 1, 0)) AS $name";
+
+			$selectTop .= "SUM(if($name > 0, 1, 0)) as $name";
+
+		}
+		
+		$query .= $selectAuthors;
+
+		$sql = "
+			FROM `{$prefix}posts` p
+			WHERE p.`id` IN \n
+				({$request}) \n
+			GROUP BY p.`id`";
+		
+		$query .= $sql;
+		
+		$fullQuery = "SELECT $selectTop from($query) as summary";
+		
+		return($fullQuery);
+	}
+
+
+
+	/**
+	 * modify test author id's
+	 */
+	private function modifyFoundAuthorsIDs($arrFoundAuthorIDs){
+
+		if(isset($arrFoundAuthorIDs[0]))
+			$arrFoundAuthorIDs = $arrFoundAuthorIDs[0];
+
+		$arrAuthorsAssoc = array();
+
+		foreach($arrFoundAuthorIDs as $strID=>$count){
+
+			$authorID = str_replace("author_", "", $strID);
+
+			$arrAuthorsAssoc[$authorID] = $count;
+		}
+
+		return($arrAuthorsAssoc);
+	}
+
 	
 	
 	/**
 	 * get widget ajax data
 	 */
 	private function putWidgetGridFrontAjaxData(){
-
+		
 		//validate by response code
-
+		
 		$responseCode = http_response_code();
 
 		if($responseCode != 200){
 			http_response_code(200);
-			UniteFunctionsUC::throwError("Request not allowed, please make sure the ajax is allowed for the ajax grid");
+			//$responseCode = (int)$responseCode;
+			//UniteFunctionsUC::throwError("Request not allowed, please make sure the ajax is allowed for the ajax grid. the response code is: $responseCode");
 		}
 
 		//init widget by post id and element id
@@ -1900,11 +2619,14 @@ class UniteCreatorFiltersProcess{
 				
 		$testTermIDs = UniteFunctionsUC::getPostGetVariable("testtermids","",UniteFunctionsUC::SANITIZE_TEXT_FIELD);
 		UniteFunctionsUC::validateIDsList($testTermIDs);
+		
+		$testAuthorIDs = UniteFunctionsUC::getPostGetVariable("testauthorids","",UniteFunctionsUC::SANITIZE_TEXT_FIELD);
+		UniteFunctionsUC::validateIDsList($testAuthorIDs);
 				
 		//replace terms mode
 		$isModeReplace = UniteFunctionsUC::getPostGetVariable("ucreplace","",UniteFunctionsUC::SANITIZE_TEXT_FIELD);
 		$isModeReplace = UniteFunctionsUC::strToBool($isModeReplace);
-
+		
 		GlobalsProviderUC::$isUnderAjax = true;
 		
 		self::$isModeReplace = $isModeReplace;
@@ -1917,6 +2639,9 @@ class UniteCreatorFiltersProcess{
 			
 			if(class_exists("UniteCreatorGutenbergIntegrate") == false)
 				UniteFunctionsUC::throwError("no gutenberg platform enabled");
+			
+			if(HelperProviderCoreUC_EL::isPostReadable($layoutID) == false)
+				UniteFunctionsUC::throwError(self::$platform." content not found");
 			
 			self::$objGutenberg = new UniteCreatorGutenbergIntegrate();
 
@@ -1948,7 +2673,7 @@ class UniteCreatorFiltersProcess{
 			
 			if(self::$showDebug == true){
 				dmp("--- Last Query Args:");
-				dmp($args);
+				dmpHtml($args);
 			}
 						
 			if(!empty(GlobalsProviderUC::$lastQueryRequest)){
@@ -1995,7 +2720,7 @@ class UniteCreatorFiltersProcess{
 				
 				if($countLen < 500){
 					dmp("<div style='color:red;'>Note - request count is too low!</div>");
-					dmp($taxRequest);
+					dmpHtml($taxRequest);
 				}
 				
 			}
@@ -2023,6 +2748,91 @@ class UniteCreatorFiltersProcess{
 
 			//set the test term id's for the output
 			GlobalsProviderUC::$arrTestTermIDs = $arrFoundTermIDs;
+		}
+		
+		//find the author id's for test (find or not in the current posts query)
+		if(!empty($testAuthorIDs)){
+			
+			if(self::$showDebug == true)
+				dmp("---- Test Not Empty Authors----");
+						
+			$args = GlobalsProviderUC::$lastQueryArgs;
+			
+			if(self::$showDebug == true){
+				dmp("--- Last Query Args (Authors):");
+				dmpHtml($args);
+			}
+						
+			if(!empty(GlobalsProviderUC::$lastQueryRequest)){
+				$request = GlobalsProviderUC::$lastQueryRequest;
+			}
+			else{
+				
+				$query = new WP_Query($args);
+				
+				if (is_wp_error($query)) {
+				    $error_message = $query->get_error_message();
+				    UniteFunctionsUC::throwError("test authors query failed: ".$error_message);
+				}
+							
+				$request = $query->request;
+			}
+			
+			//some times other hooks distrubting the request
+			//clear filters and run again if empty requests
+						
+			if(empty($request)){
+				
+				UniteFunctionsWPUC::clearAllWPFilters();
+				
+				$query = new WP_Query($args);
+				$request = $query->request;
+			}
+						
+			if(self::$showDebug == true){
+				
+				if(empty($request))
+					dmp("EMPTY AUTHOR REQUEST!!! - WILL CAUSE ERRORS IN TEST AUTHORS!");
+			}
+						
+			$authorRequest = $this->getInitFiltersAuthorRequest($request, $testAuthorIDs);
+
+			if(self::$showDebug == true){
+				
+				$countLen = strlen($authorRequest);
+				
+				dmp("---- Test Authors request count: $countLen");
+				
+				if($countLen < 100){
+					dmp("<div style='color:red;'>Note - request count is too low!</div>");
+					dmpHtml($authorRequest);
+				}
+				
+			}
+			
+			$arrFoundAuthorIDs = array();
+	
+			if(!empty($authorRequest)){
+
+				$db = HelperUC::getDB();
+				try{
+
+					$arrFoundAuthorIDs = $db->fetchSql($authorRequest);
+					$arrFoundAuthorIDs = $this->modifyFoundAuthorsIDs($arrFoundAuthorIDs);
+
+				}catch(Exception $e){
+					//just leave it empty
+				}
+			}
+			
+			if(self::$showDebug == true){
+
+				dmp("--- result - authors with num posts");
+				dmp($arrFoundAuthorIDs);
+			}
+
+			//set the test author id's for the output
+			GlobalsProviderUC::$arrTestAuthorIDs = $arrFoundAuthorIDs;
 		}
 
 		$htmlGridItems = UniteFunctionsUC::getVal($arrHtmlWidget, "html");
@@ -2070,9 +2880,9 @@ class UniteCreatorFiltersProcess{
 			$outputData["html_widgets_debug"] = $this->contentWidgetsDebug;
 
 		//add query data
-
+		
 		$arrQueryData = HelperUC::$operations->getLastQueryData();
-
+		
 		$strQueryPostIDs = HelperUC::$operations->getLastQueryPostIDs();
 
 		$outputData["query_data"] = $arrQueryData;
@@ -2123,8 +2933,10 @@ class UniteCreatorFiltersProcess{
 		if($responseCode != 200)
 			http_response_code(200);
 
-		define("UE_AJAX_SEARCH_ACTIVE", true);
-
+		define("UELM_AJAX_SEARCH_ACTIVE", true);
+		
+		GlobalsProviderUC::$isUnderAjax = true;
+		
 		$layoutID = UniteFunctionsUC::getPostGetVariable("layoutid","",UniteFunctionsUC::SANITIZE_KEY);
 		$elementID = UniteFunctionsUC::getPostGetVariable("elid","",UniteFunctionsUC::SANITIZE_KEY);
 
@@ -2141,7 +2953,7 @@ class UniteCreatorFiltersProcess{
 		$arrHtmlWidget = $this->getContentWidgetHtml($arrContent, $elementID);
 
 		GlobalsProviderUC::$isUnderAjaxSearch = false;
-
+		
 		$htmlGridItems = UniteFunctionsUC::getVal($arrHtmlWidget, "html");
 		$htmlGridItems2 = UniteFunctionsUC::getVal($arrHtmlWidget, "html2");
 
@@ -2160,6 +2972,29 @@ class UniteCreatorFiltersProcess{
 		if(!empty($htmlGridItems2))
 			$outputData["html_items2"] = $htmlGridItems2;
 
+		//add search suggestion data if no results
+		//autocorrection in options
+		
+		$lastQuery = GlobalsProviderUC::$lastPostQuery;
+		
+		$isAutoCorrect = UniteFunctionsUC::getVal(GlobalsProviderUC::$lastWidgetParams, "search_autocorrect");
+		$isAutoCorrect = UniteFunctionsUC::strToBool($isAutoCorrect);
+				
+		if($isAutoCorrect == true && !empty($lastQuery) && (int)$lastQuery->found_posts === 0){
+						
+			$lastQueryArgs = GlobalsProviderUC::$lastQueryArgs;
+			$searchTerm = UniteFunctionsUC::getVal($lastQueryArgs, "s");
+			$searchTerm = trim($searchTerm);
+			
+			if(!empty($searchTerm)){
+				$objAjaxSearch = new UniteCreatorAjaxSeach();
+				$suggestionData = $objAjaxSearch->getSearchSuggestionData($searchTerm, $lastQueryArgs);
+				
+				if(!empty($suggestionData))
+					$outputData["search_suggestion"] = $suggestionData;
+			}
+		}
+
 
 		HelperUC::ajaxResponseData($outputData);
 	}
@@ -2174,6 +3009,9 @@ class UniteCreatorFiltersProcess{
 
 		if(self::$isFilesAdded == true)
 			return(false);
+
+	        if (HelperUC::isEditMode())
+	            return false;
 
 		UniteProviderFunctionsUC::addAdminJQueryInclude();
 
@@ -2276,8 +3114,11 @@ class UniteCreatorFiltersProcess{
 	 * add values to settings from data
 	 * postIDs - exists only if avoid duplicates option set
 	 */
-	public function addWidgetFilterableVarsFromData($data, $dataPosts, $postListName, $arrPostIDs = null){
-
+	public function addWidgetFilterableVarsFromData($data, $dataPosts, $postListName, $arrPostIDs, $numPosts){
+		
+		if(empty($arrPostIDs))
+			$arrPostIDs = null;
+		
 		//check if ajax related
 		$isAjax = UniteFunctionsUC::getVal($dataPosts, $postListName."_isajax");
 		$isAjax = UniteFunctionsUC::strToBool($isAjax);
@@ -2325,19 +3166,20 @@ class UniteCreatorFiltersProcess{
 			$strAttributes .= " data-filtergroup='$filterGroup' ";
 		}
 
-
 		//add last query
+		
 		$arrQueryData = HelperUC::$operations->getLastQueryData();
-
+		
+		
 		$jsonQueryData = UniteFunctionsUC::jsonEncodeForHtmlData($arrQueryData);
-
+		
 		$strAttributes .= " querydata='$jsonQueryData'";
 
 		$this->includeClientSideScripts();
 
 		$data["uc_filtering_attributes"] = $strAttributes;
 		$data["uc_filtering_addclass"] = $addClass;
-
+		
 		return($data);
 	}
 
@@ -2345,8 +3187,11 @@ class UniteCreatorFiltersProcess{
 	 * add widget variables
 	 * uc_listing_addclass, uc_listing_attributes
 	 */
-	public function addWidgetFilterableVariables($data, $addon, $arrPostIDs = array()){
-
+	public function addWidgetFilterableVariables($data, $addon, $arrPostIDs, $numPosts){
+		
+		if(empty($arrPostIDs))
+			$arrPostIDs = array();
+		
 		$param = $addon->getParamByType(UniteCreatorDialogParam::PARAM_POSTS_LIST);
 
 		if(empty($param))
@@ -2356,8 +3201,8 @@ class UniteCreatorFiltersProcess{
 
 		$dataPosts = UniteFunctionsUC::getVal($data, $postListName);
 
-		$data = $this->addWidgetFilterableVarsFromData($data, $dataPosts, $postListName, $arrPostIDs);
-
+		$data = $this->addWidgetFilterableVarsFromData($data, $dataPosts, $postListName, $arrPostIDs, $numPosts);
+		
 		return($data);
 	}
 
@@ -2369,12 +3214,16 @@ class UniteCreatorFiltersProcess{
 
 		$taxSapSetting = HelperProviderCoreUC_EL::getGeneralSetting("tax_sap_sign");
 
+		$taxSapSetting = apply_filters("uelm_filters_url_key__taxonomy_sap", $taxSapSetting);
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 		$taxSapSetting = apply_filters("ue_filters_url_key__taxonomy_sap", $taxSapSetting);
 		
 		if(empty($taxSapSetting))
 			$taxSapSetting = "~";
 		
 		$arrParts = array();
+		$arrParts["tax_sap"] = apply_filters("uelm_filters_url_key__taxonomy_sap", $taxSapSetting);
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 		$arrParts["tax_sap"] = apply_filters("ue_filters_url_key__taxonomy_sap", $taxSapSetting);
 
 		return($arrParts);
@@ -2385,7 +3234,7 @@ class UniteCreatorFiltersProcess{
 	 * get the base url
 	 */
 	private function getFiltersJSData(){
-
+		
 		$urlBase = UniteFunctionsUC::getBaseUrl(GlobalsUC::$current_page_url, true);		//strip pagination
 
 		//include some common url filters
@@ -2403,7 +3252,7 @@ class UniteCreatorFiltersProcess{
 		if(empty($search)){
 			$search = null;
 
-			if(isset($_GET["s"]) && $_GET["s"] == "")
+			if(isset($_GET["s"]) && $_GET["s"] == "") // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public search query arg, kept in the filter URL when it is present but empty.
 				$search = "";
 		}
 
@@ -2420,7 +3269,20 @@ class UniteCreatorFiltersProcess{
 			$lang = urlencode($lang);
 			$urlBase = UniteFunctionsUC::addUrlParams($urlBase, "lang=$lang");
 		}
-		
+
+		// Preserve URL query-debug flags on filter AJAX (urlbase drives GET requests in ue_filters.js).
+		$ucQueryDebug = UniteFunctionsUC::getGetVar("ucquerydebug","",UniteFunctionsUC::SANITIZE_TEXT_FIELD);
+		if(UniteFunctionsUC::strToBool($ucQueryDebug) == true)
+			$urlBase = UniteFunctionsUC::addUrlParams($urlBase, "ucquerydebug=1");
+
+		$ucQueryDebugTerms = UniteFunctionsUC::getGetVar("ucquerydebug_terms","",UniteFunctionsUC::SANITIZE_TEXT_FIELD);
+		if(UniteFunctionsUC::strToBool($ucQueryDebugTerms) == true)
+			$urlBase = UniteFunctionsUC::addUrlParams($urlBase, "ucquerydebug_terms=1");
+
+		$ucTestChangearg = UniteFunctionsUC::getGetVar("uctestquery_changearg", "", UniteFunctionsUC::SANITIZE_NOTHING);
+		if(UniteFunctionsWPUC::isCurrentUserHasPermissions() == true && trim($ucTestChangearg) !== "")
+			$urlBase = UniteFunctionsUC::addUrlParams($urlBase, "uctestquery_changearg=".rawurlencode($ucTestChangearg));
+
 		
 		//debug client url
 
@@ -2454,8 +3316,250 @@ class UniteCreatorFiltersProcess{
 		return($arrData);
 	}
 
+	
+	private function _____MODIFY_PARAMS_PROCESS_AUTHORS_______(){}
+	
+	
+	/**
+	 * modify items (terms/authors) set num posts - unified function
+	 */
+	private function modifyOutputItems_setNumPosts($arrItems, $arrTestIDs, $isTerms = false){
+		
+		if(empty($arrItems))
+			return($arrItems);
+		
+		if($arrTestIDs === null)
+			return($arrItems);
+				
+		foreach($arrItems as $key => $item){
+			
+			$itemID = UniteFunctionsUC::getVal($item, "id");
 
+			$itemFound = array_key_exists($itemID, $arrTestIDs);
+
+			$numPosts = 0;
+
+			if($itemFound){
+				$numPosts = $arrTestIDs[$itemID];
+			}
+
+			//set the number of posts
+			$item["num_posts"] = $numPosts;
+			
+			//for terms, also set num_products if exists
+			if($isTerms == true && !empty($item["num_products"])){
+				$item["num_products"] = $numPosts;
+			}
+
+			$isHidden = !$itemFound;
+
+			if($numPosts == 0)
+				$isHidden = true;
+
+			$htmlAttributes = "";
+			$htmlAttributesNew = "";
+
+			if($isHidden == true){
+				$htmlAttributes = "hidden='hidden' style='display:none'";
+				$htmlAttributesNew = "hidden='hidden' ";	//no style
+
+				$addClass = UniteFunctionsUC::getVal($item, "addclass");
+				$addClass .= " uc-item-hidden";
+
+				$item["addclass"] = $addClass;
+			}
+
+			$item["hidden"] = $isHidden;
+			$item["html_attributes"] = $htmlAttributes;
+			$item["html_attributes2"] = $htmlAttributesNew;
+
+			$arrItems[$key] = $item;
+		}
+
+		return($arrItems);
+	}
+	
+	
+	/**
+	 * modify the authors for init after
+	 */
+	private function modifyOutputAuthors_setNumPosts($arrAuthors){
+	
+		return $this->modifyOutputTerms_setNumPosts($arrAuthors, true);
+	}
+
+
+	/**
+	 * add first item to authors array
+	 */
+	private function modifyOutputAuthors_addFirstItem($arrAuthors, $data, $filterType){
+
+		//don't add first item if no authors, if no authors, no "all" as well
+
+		if(empty($arrAuthors))
+			return(array());
+
+		$addFirst = UniteFunctionsUC::getVal($data, "add_first");
+		$addFirst = UniteFunctionsUC::strToBool($addFirst);
+
+		if($addFirst == false)
+			return($arrAuthors);
+	
+		$text = UniteFunctionsUC::getVal($data, "first_item_text_authors", __("All","unlimited-elements-for-elementor"));
+		
+		$firstAuthor = array();
+		$firstAuthor["index"] = 0;
+		$firstAuthor["name"] = $text;
+		$firstAuthor["id"] = "";
+		$firstAuthor["slug"] = "";
+		$firstAuthor["link"] = "";
+		$firstAuthor["username"] = "";
+		$firstAuthor["user_login"] = "";
+
+		$firstAuthor["addclass"] = " uc-item-all";
+		
+		if(!empty(self::$numTotalPosts))
+			$firstAuthor["num_posts"] = self::$numTotalPosts;
+		
+		array_unshift($arrAuthors, $firstAuthor);
+
+		return($arrAuthors);
+	}
+
+
+	/**
+	 * set selected class by options for authors
+	 */
+	private function modifyOutputAuthors_setSelectedClass($arrAuthors, $filterType){
+		
+		if(empty($arrAuthors))
+			return($arrAuthors);
+
+		foreach($arrAuthors as $index => $author){
+
+			$isSelected = UniteFunctionsUC::getVal($author, "isselected");
+			$isSelected = UniteFunctionsUC::strToBool($isSelected);
+
+			if($isSelected == false)
+				continue;
+
+			//hidden can't be selected
+
+			$isHidden = UniteFunctionsUC::getVal($author, "hidden");
+			$isHidden = UniteFunctionsUC::strToBool($isHidden);
+
+			if($isHidden == true)
+				continue;
+
+			$class = UniteFunctionsUC::getVal($author, "addclass","");
+			$class .= " uc-selected";
+
+			$author["addclass"] = $class;
+
+			//set select attribute
+			switch($filterType){
+				case self::TYPE_SELECT:
+				
+					$htmlAttributes = UniteFunctionsUC::getVal($author, "html_attributes");
+				
+					if(empty($htmlAttributes))
+						$htmlAttributes = "";
+
+					$htmlAttributes .= " selected";
+
+					$author["html_attributes"] = $htmlAttributes;
+
+				break;
+				case self::TYPE_CHECKBOX:
+
+					$author["html_attributes_input"] = " checked";
+
+				break;
+			}
+
+			$arrAuthors[$index] = $author;
+
+		}
+
+
+		return($arrAuthors);
+	}
+
+	/**
+	 * get data attributes for authors
+	 */
+	private function modifyOutputAuthors_getDataAttributes($arrAuthors, $filterType){
+		
+		if(empty($arrAuthors))
+			return($arrAuthors);
+		
+		foreach($arrAuthors as $index => $author){
+
+			$authorID = UniteFunctionsUC::getVal($author, "id");
+
+			if(empty($authorID))
+				continue;
+			 
+			$title = UniteFunctionsUC::getVal($author, "name");
+			$username = UniteFunctionsUC::getVal($author, "username");
+			$userLogin = UniteFunctionsUC::getVal($author, "user_login");
+			
+			// Use username or user_login as slug equivalent
+			$slug = !empty($username) ? $username : $userLogin;
+
+			$type = "author";
+
+			$title = esc_attr($title);
+			$slug = esc_attr($slug);
+
+			$key = "{$type}|{$slug}";
+
+			$htmlData = " data-id=\"$authorID\" data-type=\"$type\" data-username=\"$slug\" data-title=\"{$title}\" data-key=\"{$key}\" ";
+			
+			$author["html_data"] = $htmlData;
+
+			$arrAuthors[$index] = $author;
+		}
+
+		return($arrAuthors);
+	}
+	
 	private function _____MODIFY_PARAMS_PROCESS_TERMS_______(){}
+
+
+	/**
+	 * flatten slugs array that can contain nested groups / relations
+	 */
+	private function flattenTermSlugs($arrSlugs){
+
+		if(empty($arrSlugs))
+			return(array());
+
+		$result = array();
+
+		foreach($arrSlugs as $key => $value){
+
+			//skip relation markers
+			if($key === "relation")
+				continue;
+
+			//simple slug value
+			if(!is_array($value)){
+				if($value !== "" && $value !== null)
+					$result[] = $value;
+
+				continue;
+			}
+
+			//nested group flatten recursively
+			$nested = $this->flattenTermSlugs($value);
+
+			if(!empty($nested))
+				$result = array_merge($result, $nested);
+		}
+
+		return($result);
+	}
 
 
 	/**
@@ -2475,7 +3579,14 @@ class UniteCreatorFiltersProcess{
 
 		$slug = UniteFunctionsUC::getVal($term, "slug");
 
-		$found = in_array($slug, $arrSlugs);
+		// $arrSlugs can contain nested arrays for grouped OR conditions (|a.b|),
+		// so flatten it before searching.
+		if(is_array($arrSlugs))
+			$arrSlugsFlat = $this->flattenTermSlugs($arrSlugs);
+		else
+			$arrSlugsFlat = array($arrSlugs);
+		
+		$found = in_array($slug, $arrSlugsFlat, true);
 
 		return($found);
 	}
@@ -2496,7 +3607,7 @@ class UniteCreatorFiltersProcess{
 		
 		//if mode init - get selected id's from request
 		if(self::$isModeInit == true){
-
+			
 			$strSelectedTermIDs = UniteFunctionsUC::getPostGetVariable("ucinitselectedterms","",UniteFunctionsUC::SANITIZE_TEXT_FIELD);
 			
 			if(empty($strSelectedTermIDs))
@@ -2549,7 +3660,7 @@ class UniteCreatorFiltersProcess{
 			return($arrTerms);
 
 		$this->hasSelectedByRequest = true;
-
+		
 		//modify the selected
 
 		foreach($arrTerms as $index => $term){
@@ -2589,7 +3700,6 @@ class UniteCreatorFiltersProcess{
 
 		if($addFirst == false)
 			return($arrTerms);
-
 
 		$text = UniteFunctionsUC::getVal($data, "first_item_text", __("All","unlimited-elements-for-elementor"));
 
@@ -2640,7 +3750,7 @@ class UniteCreatorFiltersProcess{
 		$numSelectedTab = UniteFunctionsUC::getVal($data, "selected_tab_number");
 		if(empty($numSelectedTab))
 			$numSelectedTab = 1;
-
+		
 		//correct selected tab
 
 		$numTerms = count($arrTerms);
@@ -2699,66 +3809,18 @@ class UniteCreatorFiltersProcess{
 	/**
 	 * modify the terms for init after
 	 */
-	private function modifyOutputTerms_setNumPosts($arrTerms){
+	private function modifyOutputTerms_setNumPosts($arrTerms, $isAuthors = false){
 		
 		if(empty($arrTerms))
 			return($arrTerms);
 		
-		if(GlobalsProviderUC::$arrTestTermIDs === null)
+		$arrTestIDs = $isAuthors ? GlobalsProviderUC::$arrTestAuthorIDs : GlobalsProviderUC::$arrTestTermIDs;
+		$isTerms = ($isAuthors == false);
+		
+		if($arrTestIDs === null)
 			return($arrTerms);
-
-		$arrParentNumPosts = array();
-
-		$arrPostNums = GlobalsProviderUC::$arrTestTermIDs;
-				
-		foreach($arrTerms as $key => $term){
-			
-			$termID = UniteFunctionsUC::getVal($term, "id");
-
-			$termFound = array_key_exists($termID, $arrPostNums);
-
-			$numPosts = 0;
-
-			if($termFound){
-				$numPosts = $arrPostNums[$termID];
-			}
-
-			//add parent id if exists
-			$parentID = UniteFunctionsUC::getVal($term, "parent_id");
-
-			//set the number of posts
-			$term["num_posts"] = $numPosts;
-
-			if(!empty($term["num_products"]))
-				$term["num_products"] = $numPosts;
-
-			$isHidden = !$termFound;
-
-			if($numPosts == 0)
-				$isHidden = true;
-
-			$htmlAttributes = "";
-			$htmlAttributesNew = "";
-
-			if($isHidden == true){
-				$htmlAttributes = "hidden='hidden' style='display:none'";
-				$htmlAttributesNew = "hidden='hidden' ";	//no style
-
-				$addClass = UniteFunctionsUC::getVal($term, "addclass");
-				$addClass .= " uc-item-hidden";
-
-				$term["addclass"] = $addClass;
-			}
-
-			$term["hidden"] = $isHidden;
-			$term["html_attributes"] = $htmlAttributes;
-			$term["html_attributes2"] = $htmlAttributesNew;
-
-			$arrTerms[$key] = $term;
-		}
-
-
-		return($arrTerms);
+		
+		return $this->modifyOutputItems_setNumPosts($arrTerms, $arrTestIDs, $isTerms);
 	}
 
 
@@ -2944,6 +4006,133 @@ class UniteCreatorFiltersProcess{
 		return($arrTerms);
 	}
 
+
+	/**
+	 * convert metaselect repeater rows to filter items
+	 */
+	private function modifyOutputMetaSelect_getItems($data){
+
+		$metaSelect = UniteFunctionsUC::getVal($data, "metaselect");
+
+		$arrRows = array();
+
+		if(is_array($metaSelect)){
+
+			$arrRows = UniteFunctionsUC::getVal($metaSelect, "items");
+
+			if(empty($arrRows))
+				$arrRows = UniteFunctionsUC::getVal($metaSelect, "metaselect_items");
+
+			//already converted flat list of items
+			if(empty($arrRows)){
+				$first = reset($metaSelect);
+
+				if(is_array($first) && (isset($first["meta_key"]) || isset($first["title"]) || isset($first["name"])))
+					$arrRows = $metaSelect;
+			}
+		}
+
+		if(empty($arrRows))
+			$arrRows = UniteFunctionsUC::getVal($data, "metaselect_items");
+
+		if(empty($arrRows) || is_array($arrRows) == false)
+			return(array());
+
+		$arrItems = array();
+
+		foreach($arrRows as $index => $row){
+
+			if(is_array($row) == false)
+				continue;
+
+			$title = UniteFunctionsUC::getVal($row, "title");
+			if(empty($title))
+				$title = UniteFunctionsUC::getVal($row, "name");
+
+			$metaKey = UniteFunctionsUC::getVal($row, "meta_key");
+			if(empty($metaKey))
+				$metaKey = UniteFunctionsUC::getVal($row, "slug");
+
+			$metaValue = UniteFunctionsUC::getVal($row, "meta_value");
+
+			$compare = UniteFunctionsUC::getVal($row, "compare");
+			if(empty($compare))
+				$compare = "=";
+
+			if(empty($title) && empty($metaKey))
+				continue;
+
+			$id = UniteFunctionsUC::getVal($row, "_id");
+			if(empty($id))
+				$id = $metaKey;
+
+			$item = array();
+			$item["index"] = $index;
+			$item["id"] = $id;
+			$item["name"] = $title;
+			$item["slug"] = $metaKey;
+			$item["meta_key"] = $metaKey;
+			$item["meta_value"] = $metaValue;
+			$item["compare"] = $compare;
+			$item["link"] = "";
+			$item["taxonomy"] = "";
+			$item["addclass"] = "";
+
+			$arrItems[] = $item;
+		}
+
+		return($arrItems);
+	}
+
+
+	/**
+	 * get data attributes for metaselect items
+	 */
+	private function modifyOutputMetaSelect_getDataAttributes($arrItems, $filterType){
+
+		if(empty($arrItems))
+			return($arrItems);
+
+		foreach($arrItems as $index => $item){
+
+			$id = UniteFunctionsUC::getVal($item, "id");
+			$metaKey = UniteFunctionsUC::getVal($item, "meta_key");
+			$metaValue = UniteFunctionsUC::getVal($item, "meta_value");
+			$compare = UniteFunctionsUC::getVal($item, "compare", "=");
+			$slug = UniteFunctionsUC::getVal($item, "slug", $metaKey);
+			$title = UniteFunctionsUC::getVal($item, "name");
+
+			if(empty($id) && empty($metaKey))
+				continue;
+
+			$type = "meta";
+
+			$title = esc_attr($title);
+			$slug = esc_attr($slug);
+			$metaKey = esc_attr($metaKey);
+			$metaValue = esc_attr($metaValue);
+			$compare = esc_attr($compare);
+			$id = esc_attr($id);
+
+			$key = "{$type}|{$metaKey}";
+			if($metaValue !== "")
+				$key .= ":{$metaValue}";
+
+			$compareWord = HelperProviderUC::getMetaCompareUrlWord($compare);
+			if(!empty($compareWord))
+				$key .= ":{$compareWord}";
+
+			$htmlData = " data-id=\"$id\" data-type=\"$type\" data-slug=\"$slug\" data-metakey=\"$metaKey\" data-metavalue=\"$metaValue\" data-compare=\"$compare\" data-title=\"{$title}\" data-key=\"{$key}\" ";
+
+			$item["html_data"] = $htmlData;
+
+			$arrItems[$index] = $item;
+		}
+
+		return($arrItems);
+	}
+
+
 	/**
 	 * get filter attributes for search filter
 	 */
@@ -2967,7 +4156,6 @@ class UniteCreatorFiltersProcess{
 	 */
 	public function addEditorFilterArguments($data, $typeArg){
 		
-		
 		$filterType = self::TYPE_TABS;
 		
 		switch($typeArg){
@@ -2988,7 +4176,7 @@ class UniteCreatorFiltersProcess{
 
 		//add the filter related js and css includes
 		$this->includeClientSideScripts();
-
+		
 		$isInitAfter = UniteFunctionsUC::getVal($data, "init_after");
 		$isInitAfter = UniteFunctionsUC::strToBool($isInitAfter);
 
@@ -2997,7 +4185,18 @@ class UniteCreatorFiltersProcess{
 
 		$limitGrayedItems = UniteFunctionsUC::getVal($data, "load_limit_grayed");
 		$limitGrayedItems = (int)$limitGrayedItems;
-	
+
+		$showNumberOfPosts = UniteFunctionsUC::getVal($data, "show_number_of_posts");
+		$showNumberOfPosts = UniteFunctionsUC::strToBool($showNumberOfPosts);
+		
+		$filterSource = UniteFunctionsUC::getVal($data, "filter_source");
+		
+		$isAuthors = ($filterSource == "authors");
+		$isMeta = ($filterSource == "meta");
+		
+		if($isAuthors == true && $showNumberOfPosts == true)
+			$isInitAfter = true;
+		
 		$filterRole = UniteFunctionsUC::getVal($data, "filter_role");
 		if($filterRole == "single")
 			$filterRole = "";
@@ -3019,9 +4218,9 @@ class UniteCreatorFiltersProcess{
 
 		if($isUnderAjax == true)
 			$isFirstLoad = false;
-
+		
 		if($isInitAfter == true){
-
+			
 			$attributes = " data-initafter=\"true\"";
 
 			if($isUnderAjax == false && $isInsideEditor == false){
@@ -3031,7 +4230,7 @@ class UniteCreatorFiltersProcess{
 
 			$isFirstLoad = true;
 		}
-
+		
 		if($filterRole == self::ROLE_TERM_CHILD){
 
 			$termID = UniteFunctionsUC::getVal($data, "child_termid");
@@ -3055,21 +4254,29 @@ class UniteCreatorFiltersProcess{
 			$attributes .= " data-replace-mode=\"true\"";
 
 		
-		//modify terms
-
-		$arrTerms = UniteFunctionsUC::getVal($data, "taxonomy");
+		if($isAuthors == true)
+			$arrItems = UniteFunctionsUC::getVal($data, "authors");
+		elseif($isMeta == true)
+			$arrItems = $this->modifyOutputMetaSelect_getItems($data);
+		else
+			$arrItems = UniteFunctionsUC::getVal($data, "taxonomy");
 		
 		//modify the hidden as well
-			
-		$arrTerms = $this->modifyOutputTerms_setNumPosts($arrTerms, $isInitAfter, $isFirstLoad);
-	
-		//modify the selected class - add first
-		$arrTerms = $this->modifyOutputTerms_addFirstItem($arrTerms, $data, $filterType);
-
-		//modify the selected class
-		$arrTerms = $this->modifyOutputTerms_modifySelected($arrTerms, $data,$filterType);
+		if($isMeta == false)
+			$arrItems = $this->modifyOutputTerms_setNumPosts($arrItems, $isAuthors);
 		
-		$arrTerms = $this->modifyOutputTerms_modifySelectedByRequest($arrTerms);
+		//modify the selected class - add first
+		if($isAuthors == true)
+			$arrItems = $this->modifyOutputAuthors_addFirstItem($arrItems, $data, $filterType);
+		else
+			$arrItems = $this->modifyOutputTerms_addFirstItem($arrItems, $data, $filterType);
+		
+		//modify the selected class
+		$arrItems = $this->modifyOutputTerms_modifySelected($arrItems, $data,$filterType);
+		
+		//for terms only
+		if($isAuthors == false && $isMeta == false)
+			$arrItems = $this->modifyOutputTerms_modifySelectedByRequest($arrItems);
 		
 		$isFilterHidden = false;
 
@@ -3078,23 +4285,31 @@ class UniteCreatorFiltersProcess{
 			case self::TYPE_CHECKBOX:
 
 				if($isInitAfter == true && !empty($limitGrayedItems) && $isUnderAjax == false)
-					$arrTerms = $this->modifyOutputTerms_tabs_modifyLimitGrayed($arrTerms, $limitGrayedItems);
+					$arrItems = $this->modifyOutputTerms_tabs_modifyLimitGrayed($arrItems, $limitGrayedItems);
 
-				$isFilterHidden = $this->modifyOutputTerms_isFilterHidden($data, $arrTerms, $isUnderAjax);
-
+				$isFilterHidden = $this->modifyOutputTerms_isFilterHidden($data, $arrItems, $isUnderAjax);
+		
 			break;
 			case self::TYPE_SELECT:
 
 				//modify if hidden
 
-				$isFilterHidden = $this->modifyOutputTerms_isFilterHidden($data, $arrTerms, $isUnderAjax);
+				$isFilterHidden = $this->modifyOutputTerms_isFilterHidden($data, $arrItems, $isUnderAjax);
 			break;
 		}
 
-
-		$arrTerms = $this->modifyOutputTerms_setSelectedClass($arrTerms, $filterType);
+		if($isAuthors == true)
+			$arrItems = $this->modifyOutputAuthors_setSelectedClass($arrItems, $filterType);
+		else
+			$arrItems = $this->modifyOutputTerms_setSelectedClass($arrItems, $filterType);
 		
-		$arrTerms = $this->modifyOutputTerms_getDataAttributes($arrTerms, $filterType);
+		if($isAuthors == true)
+			$arrItems = $this->modifyOutputAuthors_getDataAttributes($arrItems, $filterType);
+		elseif($isMeta == true)
+			$arrItems = $this->modifyOutputMetaSelect_getDataAttributes($arrItems, $filterType);
+		else
+			$arrItems = $this->modifyOutputTerms_getDataAttributes($arrItems, $filterType);
+		
 		
 		//hide child filter at start
 
@@ -3118,9 +4333,14 @@ class UniteCreatorFiltersProcess{
 		$data["filter_addclass_item"] = $addClassItem;
 		$data["filter_first_load"] = $isFirstLoad?"yes":"no";
 		
-		$data["taxonomy"] = $arrTerms;
+		if($isAuthors)
+			$data["authors"] = $arrItems;
+		elseif($isMeta)
+			$data["metaselect"] = $arrItems;
+		else
+			$data["taxonomy"] = $arrItems;
 		
-
+			
 		return($data);
 	}
 
@@ -3141,7 +4361,7 @@ class UniteCreatorFiltersProcess{
 
 		dmp("MAIN QUERY DEBUG");
 
-		dmp($argsForDebug);
+		dmpHtml($argsForDebug);
 
 	}
 
@@ -3221,11 +4441,9 @@ s	 */
 		$setDisplayErrors = HelperProviderCoreUC_EL::getGeneralSetting("enable_display_errors_ajax");
 		$setDisplayErrors = UniteFunctionsUC::strToBool($setDisplayErrors);
 
-		if($setDisplayErrors == true){
-
+		if($setDisplayErrors == true)
+			// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- Show PHP errors in Ajax when the general setting is enabled.
 			ini_set("display_errors", "on");
-			error_reporting(E_ALL);
-		}
 
 	}
 
@@ -3252,8 +4470,9 @@ s	 */
 		$this->checkSetErrorsReporting();
 
 		self::$isUnderAjax = true;
-				
-		try{
+		
+		
+		try{	
 
 			switch($frontAjaxAction){
 				case "getfiltersdata":
@@ -3289,6 +4508,8 @@ s	 */
 				break;
 				case "custom":
 					
+					do_action("uelm_custom_front_ajax_action");
+					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 					do_action("uc_custom_front_ajax_action");
 
 					//if not catch - will throw error
@@ -3308,6 +4529,19 @@ s	 */
 
 	}
 
+	/**
+	 * on plugins loaded - do some operations like disable plugins
+	 */
+	public function operateOnPluginsLoaded(){
+
+		$frontAjaxAction = UniteFunctionsUC::getPostGetVariable("ucfrontajaxaction","",UniteFunctionsUC::SANITIZE_KEY);
+		
+		if(empty($frontAjaxAction))
+			return(false);
+		
+		UniteCreatorPluginIntegrations::disableShortPixel();
+	}
+	
 
 	/**
 	 * init wordpress front filters
@@ -3317,10 +4551,12 @@ s	 */
 		if(is_admin() == true)
 			return(false);
 		
+		add_action("plugins_loaded", array($this, "operateOnPluginsLoaded"),4);
+			
 		add_action("wp", array($this, "operateAjaxResponse"));
 		
-		add_action("ue_before_custom_posts_query", array($this, "onBeforeCustomPostsQuery"));
-		//add_action("ue_after_custom_posts_query", array($this, "onAfterCustomPostsQuery"));
+		add_action("uelm_before_custom_posts_query", array($this, "onBeforeCustomPostsQuery"));
+		//add_action("uelm_after_custom_posts_query", array($this, "onAfterCustomPostsQuery"));
 
 
 	}

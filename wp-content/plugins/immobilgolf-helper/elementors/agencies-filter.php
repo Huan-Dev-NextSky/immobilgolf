@@ -138,7 +138,7 @@ class Immobilgolf_AgenciesFilter_Element extends \Elementor\Widget_Base
 								var data = {
 									country: $(this).val()
 								};
-								$.getJSON( "https://portal.exileart.it/index.php/api/get_city/", data, function( data ) {
+								$.getJSON( "https://portal.immobilgolf.com/index.php/api/get_city/", data, function( data ) {
 									
 									$('#search_city').html(
 											$('<option></option>')
@@ -176,7 +176,7 @@ class Immobilgolf_AgenciesFilter_Element extends \Elementor\Widget_Base
 								if($('#search_city').val() != ''){
 									data['city'] = $('#search_city').val();
 								}
-								$.post("https://portal.exileart.it/index.php/frontend/filter_agencies/it", data,
+								$.post("https://portal.immobilgolf.com/index.php/frontend/filter_agencies/it", data,
 								function(data){
 									if(mapRefresh && $('#main-map').length > 0)
 									{
@@ -191,7 +191,7 @@ class Immobilgolf_AgenciesFilter_Element extends \Elementor\Widget_Base
 											L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 												attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 											}).addTo(map);
-											var positron = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+											//var positron = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 										} else {
 											for (var i = 0; i < markers.length; i++) {
 												clusters.removeLayer(markers[i]);
@@ -208,7 +208,8 @@ class Immobilgolf_AgenciesFilter_Element extends \Elementor\Widget_Base
 												var marker = L.marker(
 													[listing.latLng[0], listing.latLng[1]],
 													{icon: L.divIcon({
-															html: '<img src="'+listing.options.icon+'">',
+															//html: '<img src="'+listing.options.icon+'">',
+															html: '<img src="https://immobilgolf.com/wp-content/uploads/2025/10/glifo-dorato.png">',
 															className: 'open_steet_map_marker google_marker',
 															iconSize: [35, 45],
 															popupAnchor: [-1, -25],
@@ -237,12 +238,12 @@ class Immobilgolf_AgenciesFilter_Element extends \Elementor\Widget_Base
 										$('#search_country').append(
 											$('<option></option>')
 												.val('')
-												.text('Select Country')
+												.text('Seleziona nazione...')
 										);
 										$('#search_city').append(
 											$('<option></option>')
 												.val('')
-												.text('Select City')
+												.text('Seleziona città...')
 										);
 										if(data.country.length > 0)
 										{
@@ -272,14 +273,16 @@ class Immobilgolf_AgenciesFilter_Element extends \Elementor\Widget_Base
 										<div class="col-md-12" style="">
 											<div class="row clearfix">
 												<div class="col-xl-12">
+												    <label>Seleziona l'area in cui cerchi un'agenzia di riferimento</label>
 													<div class="form-group form-group-lg field_select">
-														<input id="search_area" name="area" type="text" class="form-control noavtoWidth color-secondary fill_inited" value="" placeholder="<?= __('Area', 'immobilgolf') ?>" autocomplete="nope">
+														<input id="search_area" name="area" type="text" class="form-control noavtoWidth color-secondary fill_inited" value="" placeholder="ex. Veneto, Circolo Pinetina, Versilia... " autocomplete="nope">
 													</div>
 												</div>
 											</div>
 										</div>
+										<div class=" col-md-12" style="margin-bottom:20px;color:#E26824;font-wieght:700;">Oppure cerca per </div>
 										<div class=" col-md-6" style="">
-											<label><?= __('Country', 'immobilgolf') ?></label>
+											<label><?= __('Nazione', 'immobilgolf') ?></label>
 											<div class="form-group form-group-lg field_select">
 												<div class="select_container">
 													<select id="search_country" name="country" class="form-control select_styled base no-padding color-secondary fill_inited">
@@ -288,7 +291,7 @@ class Immobilgolf_AgenciesFilter_Element extends \Elementor\Widget_Base
 											</div>
 										</div>
 										<div class=" col-md-6" style="">
-											<label><?= __('City', 'immobilgolf') ?></label>
+											<label><?= __('Città', 'immobilgolf') ?></label>
 											<div class="form-group form-group-lg field_select">
 												<div class="select_container">
 													<select id="search_city" name="city" class="form-control select_styled base no-padding color-secondary fill_inited">
@@ -296,7 +299,7 @@ class Immobilgolf_AgenciesFilter_Element extends \Elementor\Widget_Base
 												</div>
 											</div>
 										</div>
-										<div class="col-lg-1">
+										<div class="col-lg-1" style="margin-top:20px;">
 											<button type="submit" id="search-start" class="btn btn-search focus-color"><i class="fa fa-search fa-color-white hide_on_ajax"></i><i class="fa fa-spinner fa-spin ajax_v fa-ajax-indicator hidden"></i> Filtra i Risultati</button>
 										</div>
 									</div>

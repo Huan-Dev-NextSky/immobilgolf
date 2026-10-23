@@ -5,6 +5,8 @@
  * @copyright Copyright (c) 2017 UniteCMS
  * @license http://www.gnu.org/licenses/gpl-2.0.html GNU/GPLv2 or later
 */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 
 //no direct accees
 defined ('UNLIMITED_ELEMENTS_INC') or die ('restricted aceess');
@@ -184,14 +186,14 @@ class AddonLibraryCreatorPluginUC extends UniteCreatorPluginBase{
 
 //run the plugin
 
-$filepathProvider = dirname(__FILE__)."/../plugin_provider.php";
-if(file_exists($filepathProvider)){
+$uelm_filepathProvider = dirname(__FILE__)."/../plugin_provider.php";
+if(file_exists($uelm_filepathProvider)){
 	
-	require $filepathProvider;
+	require $uelm_filepathProvider;
 	new AddonLibraryCreatorPluginProviderUC();
 	
 }else{
-	$objPlugin = new AddonLibraryCreatorPluginUC();
+	$uelm_objPlugin = new AddonLibraryCreatorPluginUC();
 }
 		
 

@@ -1,0 +1,383 @@
+ul.nav li.dropdown:hover ul.dropdown-menu {
+    display: block;
+}
+
+h1 a {
+    display: inline-block;
+    background: url('../img/darth_vader.jpg') no-repeat;
+    height: 70px;
+    padding: 20px 0 0 90px;
+    color: black;
+}
+
+h1 a:hover {
+    text-decoration: none;
+    color: black;
+}
+
+h2 a {
+    color: black;
+}
+
+/* h1, h2, h3 { font-family: georgia, serif; } */
+p.pubdate {
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+.sidebar h3 {
+    font-size: 1em;
+    line-height: 1.2em;
+    margin-bottom: 0;
+}
+
+.sidebar ul {
+    margin-left: 0;
+    list-style-type: none;
+}
+
+/* Example script */
+.bb-alert {
+    top: 10%;
+    font-size: 1.2em;
+    margin-bottom: 0;
+    padding: 1em 1.3em;
+    position: fixed;
+    right: 50%;
+}
+
+.files-list {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+.files-list li {
+    margin: 3px 3px 3px 0;
+    padding: 1px;
+    display: block;
+    float: left;
+    width: 164px;
+    height: 175px;
+    border: 1px solid #E5E5E5;
+    cursor: move;
+    position: relative;
+}
+
+.files-list li.nobuttons {
+    height: 155px;
+}
+
+.files-list li .preview {
+    width: 160px;
+    height: 120px;
+    text-align: center;
+    display: block;
+    overflow: hidden;
+    padding: 2px;
+}
+
+.files-list li .filename {
+    text-align: center;
+    max-width: 160px;
+    overflow: hidden;
+    padding: 0px 0px 2px 0px;
+}
+
+.files-list li .options-container {
+    text-align: center;
+}
+
+.files-list li:hover {
+    background: #F5F5F5;
+}
+
+.files-list li div.progress,
+.files-list li div.error {
+    position: absolute;
+    top: 60px;
+    left: 2px;
+}
+
+.center,
+table td.center,
+table th.center {
+    text-align: center;
+}
+
+ol.disable-move li div,
+.disable-move li {
+    cursor: default;
+}
+
+.break {
+    page-break-before: always;
+}
+
+pre p {
+    position: relative;
+    margin: 0px;
+    padding: 0px;
+}
+
+
+/* Redesign */
+
+.mb-0 {
+    margin-bottom: 0px !important;
+}
+
+* {
+    margin: 0px;
+    padding: 0px;
+    box-sizing: border-box;
+}
+
+body,
+html {
+    height: auto;
+    font-family: Poppins-Regular, sans-serif;
+}
+
+body {
+    width: 100%;
+    min-height: 100vh;
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -moz-box;
+    display: -ms-flexbox;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    background: #a64bf4;
+    background: -webkit-linear-gradient(45deg, #00dbde, #fc00ff);
+    background: -o-linear-gradient(45deg, #00dbde, #fc00ff);
+    background: -moz-linear-gradient(45deg, #00dbde, #fc00ff);
+    background: linear-gradient(45deg, #00dbde, #fc00ff);
+
+}
+
+.wrap-content {
+    width: 550px;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    padding: 42px 30px 45px 30px;
+}
+
+.wrap-content .modal-header h3 {
+    margin: 0;
+    line-height: 30px;
+    text-align: center;
+
+    display: block;
+    font-size: 39px;
+    color: #333333;
+    line-height: 1.2;
+    text-align: center;
+    padding-bottom: 44px;
+}
+
+.wrap-content .form-horizontal .control-group {
+    margin-bottom: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.wrap-content .form-horizontal .control-label {
+    float: initial;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+    padding: 0 5px;
+    margin: 0;
+}
+
+.wrap-content .controls .hint {
+    margin-top: 10px;
+}
+
+.form-horizontal .controls {
+    margin: 0;
+    width: 100%;
+    position: relative;
+}
+
+.wrap-content .form-horizontal select,
+.wrap-content .form-horizontal input:not([type="submit"]) {
+    display: block;
+    width: 100%;
+    background: transparent;
+    font-family: Poppins-Medium;
+    font-size: 18px;
+    color: #333333;
+    line-height: 1.2;
+    padding: 0 5px;
+    border: 0;
+    box-shadow: none !important;
+    height: auto;
+    min-height: 40px;
+    margin: 0;
+}
+
+.wrap-content .form-horizontal input::placeholder {
+    color: #adadad;
+    text-transform: capitalize;
+    font-family: Poppins-Regular, sans-serif;
+}
+
+.form-horizontal .controls::before {
+    content: "";
+    display: block;
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    -webkit-transition: all 0.4s;
+    -o-transition: all 0.4s;
+    -moz-transition: all 0.4s;
+    transition: all 0.4s;
+    background: #d9d9d9;
+}
+
+.form-horizontal .controls::after {
+    content: "";
+    display: block;
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    -webkit-transition: all 0.4s;
+    -o-transition: all 0.4s;
+    -moz-transition: all 0.4s;
+    transition: all 0.4s;
+    background: #e30404;
+}
+
+.form-horizontal .controls:focus-within:after {
+    width: 100%;
+}
+
+.wrap-content .form-title {
+    display: block;
+    font-size: 39px;
+    color: #333333;
+    line-height: 1.2;
+    text-align: center;
+    padding: 0;
+    margin-bottom: 44px;
+}
+
+.container-contact100-form-btn {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -moz-box;
+    display: -ms-flexbox;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-top: 13px;
+}
+
+.wrap-contact100-form-btn {
+    width: 100%;
+    display: block;
+    position: relative;
+    z-index: 1;
+    border-radius: 25px;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.contact100-form-bgbtn {
+    position: absolute;
+    z-index: -1;
+    width: 300%;
+    height: 100%;
+    background: #a64bf4;
+    background: -webkit-linear-gradient(left, #00dbde, #fc00ff, #00dbde, #fc00ff);
+    background: -o-linear-gradient(left, #00dbde, #fc00ff, #00dbde, #fc00ff);
+    background: -moz-linear-gradient(left, #00dbde, #fc00ff, #00dbde, #fc00ff);
+    background: linear-gradient(left, #00dbde, #fc00ff, #00dbde, #fc00ff);
+    top: 0;
+    left: -100%;
+
+    -webkit-transition: all 0.4s;
+    -o-transition: all 0.4s;
+    -moz-transition: all 0.4s;
+    transition: all 0.4s;
+}
+
+.contact100-form-btn {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -moz-box;
+    display: -ms-flexbox;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 20px;
+    width: 100%;
+    height: 50px;
+    background: transparent;
+    font-size: 16px;
+    color: #fff;
+    line-height: 1.2;
+    outline: none;
+    border: 0;
+    box-shadow: none;
+}
+
+.wrap-contact100-form-btn:hover .contact100-form-bgbtn {
+    left: 0;
+}
+
+.contact100-form-btn i {
+    -webkit-transition: all 0.4s;
+    -o-transition: all 0.4s;
+    -moz-transition: all 0.4s;
+    transition: all 0.4s;
+}
+
+.contact100-form-btn:hover i {
+    -webkit-transform: translateX(10px);
+    -moz-transform: translateX(10px);
+    -ms-transform: translateX(10px);
+    -o-transform: translateX(10px);
+    transform: translateX(10px);
+}
+
+.loader.hidden {
+    visibility: hidden;
+}
+
+.loader {
+    width: 25px;
+    height: 25px;
+    border: 3px solid #FFF;
+    border-bottom-color: rgb(255, 255, 255);
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+    top: 12px;
+    position: absolute;
+    margin-left: 15px;
+}
+
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}

@@ -45,6 +45,7 @@ class UniteCreatorDialogParamWork{
 	const PARAM_ICON_LIBRARY = "uc_icon_library";
 	const PARAM_SHAPE = "uc_shape";
 	const PARAM_IMAGE = "uc_image";
+	const PARAM_FILE = "uc_file";
 	const PARAM_MAP = "uc_map";
 	const PARAM_ADDONPICKER = "uc_addonpicker";
 	const PARAM_TYPOGRAPHY = "uc_typography";
@@ -67,6 +68,7 @@ class UniteCreatorDialogParamWork{
 	const PARAM_SPECIAL = "uc_special";
 	const PARAM_POST_SELECT = "uc_post_select";
 	const PARAM_TERM_SELECT = "uc_term_select";
+	const PARAM_META_SELECT = "uc_meta_select";
 	const PARAM_RAW_HTML = "uc_raw_html";
 	const PARAM_HIDDEN = "uc_hidden";
 
@@ -188,6 +190,7 @@ class UniteCreatorDialogParamWork{
 		$this->addParam(self::PARAM_COLORPICKER, esc_html__("Color Picker", "unlimited-elements-for-elementor"));
 		$this->addParam(self::PARAM_LINK, esc_html__("Link", "unlimited-elements-for-elementor"));
 		$this->addParam(self::PARAM_IMAGE, esc_html__("Image (media)", "unlimited-elements-for-elementor"));
+		$this->addParam(self::PARAM_FILE, esc_html__("File (media)", "unlimited-elements-for-elementor"));
 		$this->addParam(self::PARAM_HR, esc_html__("HR Line", "unlimited-elements-for-elementor"));
 		$this->addParam(self::PARAM_HEADING, esc_html__("Heading", "unlimited-elements-for-elementor"));
 		$this->addParam(self::PARAM_FONT_OVERRIDE, esc_html__("Font Override", "unlimited-elements-for-elementor"));
@@ -237,6 +240,7 @@ class UniteCreatorDialogParamWork{
 
 		$this->addParam(self::PARAM_POST_SELECT, esc_html__("Post Select", "unlimited-elements-for-elementor"));
 		$this->addParam(self::PARAM_TERM_SELECT, esc_html__("Term Select", "unlimited-elements-for-elementor"));
+		$this->addParam(self::PARAM_META_SELECT, esc_html__("Meta Select", "unlimited-elements-for-elementor"));
 
 		$this->addParam(self::PARAM_SPECIAL, esc_html__("Special Attribute", "unlimited-elements-for-elementor"));
 
@@ -248,9 +252,9 @@ class UniteCreatorDialogParamWork{
 	 */
 	private function initSelectListMainAndItemParams(){
 		
-		$categoryParams1 = esc_html__("Basic", "unlimited-elements-for-elementor");
-		$categoryParams2 = esc_html__("Css", "unlimited-elements-for-elementor");
-		$categoryParams3 = esc_html__("Advanced", "unlimited-elements-for-elementor");
+		$categoryParams1 = __("Basic", "unlimited-elements-for-elementor");
+		$categoryParams2 = __("Css", "unlimited-elements-for-elementor");
+		$categoryParams3 = __("Advanced", "unlimited-elements-for-elementor");
 		
 		$arrCategoriesParams = array(
 			$categoryParams1 => array(
@@ -296,8 +300,10 @@ class UniteCreatorDialogParamWork{
 				self::PARAM_POST_TERMS,
 				self::PARAM_WOO_CATS,
 				self::PARAM_INSTAGRAM,
-				self::PARAM_ICON,
+				self::PARAM_FILE,
 				self::PARAM_SPECIAL,
+				self::PARAM_ICON,
+				self::PARAM_META_SELECT,
 			),
 		);
 
@@ -415,11 +421,12 @@ class UniteCreatorDialogParamWork{
 	/**
 	 * put checkbox input
 	 */
-	protected function putCheckbox($name, $text){
+	protected function putCheckbox($name, $text, $isDefaultChecked = false){
+
 		?>
 			<label class="unite-inputs-label-inline-free">
 					<?php echo esc_html($text)?>:
-				 	<input type="checkbox" onfocus="this.blur()" name="<?php echo esc_attr($name)?>">
+				 	<input type="checkbox" onfocus="this.blur()" name="<?php echo esc_attr($name)?>"<?php if($isDefaultChecked === true){ echo ' data-defaultchecked="true" checked'; } ?>>
 			</label>
 
 		<?php
@@ -686,7 +693,7 @@ class UniteCreatorDialogParamWork{
 		$arrTypes["json"] = "Json (lottie)";
 
 		$htmlSelect = HelperHtmlUC::getHTMLSelect($arrTypes,"image", "name='media_type' class='uc-control' data-controlled-selector='.uc-media-param-image-attributes'",true);
-
+		
 		?>
 			<?php esc_attr_e("Media Type","unlimited-elements-for-elementor") ?>:
 
@@ -699,7 +706,6 @@ class UniteCreatorDialogParamWork{
 			<div class="unite-inputs-sap-double"></div>
 
 			<div class="uc-media-param-image-attributes" data-control="image">
-
 
 				<?php $this->putImageSelectInput("default_value",esc_html__("Default Image","unlimited-elements-for-elementor")); ?>
 
@@ -728,6 +734,40 @@ class UniteCreatorDialogParamWork{
 		<?php
 	}
 
+	/**
+	 * put file param settings
+	 */
+	private function putFileParam(){
+
+		?>
+			<div class="unite-inputs-sap-double"></div>
+
+			<div class="unite-inputs-label">
+				<?php esc_html_e("Allowed File Types", "unlimited-elements-for-elementor")?>
+			</div>
+
+			<div class="unite-inputs-sap"></div>
+
+			<?php $this->putCheckbox("file_type_application", __("Application", "unlimited-elements-for-elementor"), true)?>
+			<div class="unite-inputs-description">
+				<?php esc_html_e("Extensions: pdf, doc, docx, xls, xlsx, ppt, pptx, zip (plus other WordPress application types)", "unlimited-elements-for-elementor")?>
+			</div>
+			<div class="vert_sap10"></div>
+			<?php $this->putCheckbox("file_type_image", __("Image", "unlimited-elements-for-elementor"))?>
+			<div class="unite-inputs-description">
+				<?php esc_html_e("Extensions: jpg, jpeg, png, gif, webp, bmp, tiff, ico (plus other WordPress image types)", "unlimited-elements-for-elementor")?>
+			</div>
+			<div class="vert_sap10"></div>
+			<?php $this->putCheckbox("file_type_video", __("Video", "unlimited-elements-for-elementor"))?>
+			<div class="unite-inputs-description">
+				<?php esc_html_e("Extensions: mp4, mov, webm, ogv, avi, wmv, flv, mpeg, 3gp (plus other WordPress video types)", "unlimited-elements-for-elementor")?>
+			</div>
+			<div class="vert_sap10"></div>
+			<?php $this->putCheckbox("file_type_svg", __("SVG", "unlimited-elements-for-elementor"))?>
+
+		<?php
+	}
+
 
 	/**
 	 * put single setting input
@@ -747,6 +787,13 @@ class UniteCreatorDialogParamWork{
 					"source" => "addon",
 					"url_name" => $name,
 					"size_name" => $name . "_size",
+				));
+			break;
+			case "file":
+				$objSettings->addFile($name, "", $text, array(
+					"source" => "addon",
+					"url_name" => $name,
+					"file_types" => array("application", "image", "video", "svg"),
 				));
 			break;
 			case "mp3":
@@ -770,6 +817,14 @@ class UniteCreatorDialogParamWork{
 	protected function putImageSelectInput($name, $text){
 
 		$this->putSingleSettingInput($name, $text, "image");
+	}
+
+	/**
+	 * put file select input
+	 */
+	protected function putFileSelectInput($name, $text){
+
+		$this->putSingleSettingInput($name, $text, "file");
 	}
 
 
@@ -1247,6 +1302,16 @@ class UniteCreatorDialogParamWork{
 
 	}
 
+	/**
+	 * function for override
+	 */
+	protected function putMetaSelectAttribute(){
+
+		dmp("putMetaSelectAttribute: function for override");
+		exit();
+
+	}
+
 
 	private function a___________DROPDOWN_PARAM________(){}
 
@@ -1610,6 +1675,9 @@ class UniteCreatorDialogParamWork{
 			case self::PARAM_IMAGE:
 				$this->putImageParam();
 			break;
+			case self::PARAM_FILE:
+				$this->putFileParam();
+			break;
 			case "uc_mp3":
 				$this->putMp3Param();
 			break;
@@ -1636,6 +1704,9 @@ class UniteCreatorDialogParamWork{
 			break;
 			case self::PARAM_POST_TERMS:
 				$this->putPostTermsParam();
+			break;
+			case self::PARAM_META_SELECT:
+				$this->putMetaSelectAttribute();
 			break;
 			case self::PARAM_WOO_CATS:
 				$this->putWooCatsParam();
@@ -1806,12 +1877,13 @@ class UniteCreatorDialogParamWork{
                 <ul>
 	                <?php
                         $i = 1;
+                        $contentID = "";
                         foreach($this->arrSelectListParams as $category => $params){
 
                                 echo "<div class='uc-li-column'>";
 
                                 if($category)
-                                    echo "<h3 class='uc-param-category-name'>".esc_html__($category, "unlimited-elements-for-elementor")."</h3>";
+                                    echo "<h3 class='uc-param-category-name'>".esc_html($category)."</h3>";
 
                                 echo "<div class='uc-scroll-li-column'>";
                                 if($i == 1)
@@ -1835,7 +1907,7 @@ class UniteCreatorDialogParamWork{
                 </ul>
             </div>
 
-            <input type="text" class="uc-paramdialog-select-type" value="<?php echo $contentID; ?>">
+            <input type="text" class="uc-paramdialog-select-type" value="<?php echo esc_attr($contentID); ?>">
         </div>
 
 		<?php
@@ -2069,6 +2141,7 @@ class UniteCreatorDialogParamWork{
 			self::PARAM_HR,
 			self::PARAM_HEADING,
 			self::PARAM_IMAGE,
+			self::PARAM_FILE,
 			self::PARAM_AUDIO,
 			self::PARAM_ICON,
 			self::PARAM_ICON_LIBRARY,
@@ -2106,6 +2179,7 @@ class UniteCreatorDialogParamWork{
 			self::PARAM_HR,
 			self::PARAM_HEADING,
 			self::PARAM_IMAGE,
+			self::PARAM_FILE,
 			self::PARAM_AUDIO,
 			self::PARAM_ICON,
 			self::PARAM_ICON_LIBRARY,

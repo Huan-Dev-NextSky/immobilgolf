@@ -1,0 +1,739 @@
+@charset "UTF-8";
+
+body {
+	background: #ffffff;
+}
+
+.footer-mask {
+    background: #1e4632!important;
+}
+
+.footer-bottom {
+    background: #1e4632!important;
+}
+
+/*.container {
+	width: 90%;
+	max-width: 1400px;
+	margin: 0 auto;
+	padding: 0px;
+}*/
+
+.container {
+	width: 100%;
+	max-width: 2400px;
+	margin: 0 auto;
+	padding: 0px;
+	background-color: #ffffff;
+}
+
+.container-header {
+	background-color: #1e4632;
+}
+
+.container-footer {
+	background-color: #1e4632;
+}
+
+header {
+	/*background: linear-gradient(135deg, #2c3e50 0%, #1a2530 100%);*/
+	background-color: #1e4632;
+	color: white;
+	padding: 30px 0;
+	text-align: center;
+	border-bottom: 5px solid #1e4632;
+	margin-bottom: 50px;
+}
+
+.logo-container {
+	margin-bottom: 20px;
+}
+
+.logo {
+	width: 150px;
+	height: 150px;
+	border-radius: 50%;
+	object-fit: cover;
+	border: 5px solid #1e4632;
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.logo-light {
+	width: 75px;
+	height: 75px;
+	border-radius: 50%;
+	object-fit: cover;
+	border: 5px solid #1e4632;
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+	margin-top: 5px;
+}
+
+h1 {
+	font-size: 2.5rem;
+	margin-bottom: 10px;
+	font-weight: 700;
+}
+
+.tagline {
+	font-size: 1.2rem;
+	font-weight: 300;
+	opacity: 0.9;
+}
+
+.content-section {
+	display: flex;
+	flex-wrap: wrap;
+	margin: 0px 0;
+	/*margin: 70px 0;*/
+	background: white;
+	/*border-radius: 10px;*/
+	border-radius: 0px;
+	overflow: hidden;
+	max-width:1400px;
+	margin:0 auto;
+}
+
+/*.info-section {
+	flex: 0 0 40%;
+	min-width: 300px;
+	padding: 80px 0px 30px 0px;
+	background: white;
+}*/
+
+.info-section {
+    flex: 0 0 40%;
+    min-width: 300px;
+    padding: 45px 30px 30px 30px;
+    background: #1d4633;
+    color:white;
+    border-radius:25px 25px 0px 0px;
+    width:100%;
+}
+
+.media-section {
+	/* Imposta la larghezza di base a 65% */
+	flex: 0 0 60%;
+	min-width: 300px;
+	background: #ffffff;
+	padding: 0px;
+	display: flex;
+	flex-direction: column;
+}
+
+.media-section h2 {
+	padding: 10px 20px 20px 20px;
+	width: 85%;
+	margin: 0 auto;
+}
+
+h2 {
+	color: #ffffff;
+	/*color: #1e4632;*/
+	margin-bottom: 20px;
+	padding-bottom: 10px;
+	border-bottom: 2px solid #ffffff;
+	/*border-bottom: 2px solid #1e4632;*/
+	font-size: 1.5rem;
+	text-transform: uppercase;
+}
+
+h3 {
+	color: #2c3e50;
+	margin-bottom: 15px;
+	font-size: 1.5rem;
+}
+
+.description {
+	margin-bottom: 15px;
+	line-height: 1.5;
+	color: #555;
+	font-size: 15px;
+	padding: 30px;
+	text-align: justify;
+}
+
+.contact-info {
+	margin-bottom: 25px;
+	padding: 20px 20px 0px 20px;
+}
+
+.contact-item {
+	display: flex;
+	align-items: center;
+	margin-bottom: 15px;
+	font-size: 16px;
+	/*text-transform:uppercase;*/
+}
+
+.contact-item i {
+    width: 30px;
+    color: #f0ad4e;
+    font-size: 1.2rem;
+}
+
+.gallery-section {
+	margin-top: 0px;
+	padding: 20px 0px 0px 0px;
+}
+
+.slider {
+	position: relative;
+	height: 250px;
+	overflow: hidden;
+	border-radius: 8px;
+	margin-bottom: 20px;
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.slide {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	transition: opacity 1s ease;
+	background-size: cover;
+	background-position: center;
+}
+
+.slide.active {
+	opacity: 1;
+}
+
+.slider-nav {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 20px;
+}
+
+.slider-dot {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: #ccc;
+	margin: 0 5px;
+	cursor: pointer;
+	transition: background 0.3s ease;
+}
+
+.slider-dot.active {
+	background: #1e4632;
+}
+
+.video-container {
+	position: relative;
+	padding-bottom: 56.25%;
+	height: 0;
+	overflow: hidden;
+	border-radius: 8px;
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+	margin-top: 30px !important;
+	width: 100%;
+	margin: 0 auto;
+}
+
+.video-container iframe {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	border: none;
+
+}
+
+/* Nuova sezione appartamenti */
+.apartments-section {
+	background-color: #ffffff;
+	padding: 30px 0px 0px 0px;
+	margin: 0px 30px;
+	border-radius: 10px;
+	color: white;
+	/*flex-grow: 1;*/
+}
+
+.apartments-header {
+	text-align: center;
+	margin-bottom: 40px;
+	/*background-color:#1e4632;*/
+	/*background:linear-gradient(135deg, #000000 0%, #0d3c27 100%);*/
+	border-radius: 10px;
+}
+
+.apartments-header h2 {
+	color: #1d4633;
+	border-bottom: 2px solid #1e4632;
+	display: inline-block;
+	padding-bottom: 10px;
+}
+
+.apartments-grid {
+	display: grid;
+	/*grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));*/
+	grid-template-columns: repeat(auto-fit, minmax(100%, 1fr));
+	gap: 30px;
+	padding: 0px 0px;
+}
+
+.apartment-card {
+	background: white;
+	border-radius: 10px;
+	overflow: hidden;
+	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+	transition: transform 0.3s ease;
+}
+
+.apartment-card:hover {
+	transform: translateY(-5px);
+}
+
+.apartment-image {
+	height: 200px;
+	background-size: cover;
+	background-position: center;
+}
+
+.apartment-details {
+	padding: 20px;
+	color: #333;
+}
+
+.apartment-title {
+	font-size: 1.4rem;
+	margin-bottom: 10px;
+	color: #2c3e50;
+}
+
+.apartment-location {
+	display: flex;
+	align-items: center;
+	margin-bottom: 15px;
+	color: #7f8c8d;
+}
+
+.apartment-location i {
+	margin-right: 8px;
+	color: #1e4632;
+}
+
+.apartment-features {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 15px;
+	border-top: 1px solid #eee;
+	padding-top: 15px;
+}
+
+.feature {
+	display: flex;
+	align-items: center;
+}
+
+.feature i {
+	margin-right: 5px;
+	color: #1e4632;
+}
+
+.apartment-price {
+	font-size: 1.5rem;
+	font-weight: bold;
+	color: #2c3e50;
+	text-align: right;
+	margin-top: 10px;
+}
+
+footer {
+	text-align: center;
+	padding: 20px;
+	background: #1e4632;
+	color: white;
+	margin-top: 0px;
+}
+
+img.luxury-badge {
+	width: 100%;
+	margin-bottom: 0px;
+}
+
+img.light-badge {
+	width: 35px;
+}
+
+h2.titolo_sezione {
+	padding: 0px 0px 10px 0px;
+	width: 100%;
+	margin: 0 auto;
+}
+
+.description-section {
+	background-color: #f1f5f9;
+	margin-bottom: 50px;
+	border-radius: 0px 10px 10px 10px;
+}
+
+@media (max-width: 768px) {
+	.content-section {
+		flex-direction: column;
+	}
+
+	h1 {
+		font-size: 2rem;
+	}
+
+	.slider {
+		height: 200px;
+	}
+
+	.apartments-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.swiper-slide {
+		width: 100% !important;
+	}
+}
+
+/*START CONTAINER ABOUT */
+.container-about {
+	display: flex;
+	width: 90%;
+	max-width: 1400px;
+	margin: 0 auto;
+	/*box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);*/
+	/*border-radius: 10px;*/
+	overflow: hidden;
+	min-height: 200px;
+}
+
+/*.left-column {
+	flex: 0 0 30%;
+	background: linear-gradient(135deg, #000000 0%, #0d3c27 100%);
+	padding: 40px 30px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	overflow: hidden;
+	border-radius: 15px;
+	max-height: 250px;
+}*/
+
+.left-column {
+    text-align: center;
+}
+
+.badge-container {
+	flex: 0 0 30%;
+	background: linear-gradient(135deg, #000000 0%, #0d3c27 100%);
+	padding: 40px 30px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	overflow: hidden;
+	border-radius: 15px;
+	max-height: 250px;
+}
+
+.logo-container {
+	text-align: center;
+	margin-bottom: 0px;
+	z-index: 2;
+}
+
+.right-column {
+	flex: 0 0 70%;
+	background: white;
+	padding: 0px 40px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.about-box {
+	max-width: 1400px;
+	width: 100%;
+}
+
+.about-title {
+	font-size: 32px;
+	color: #1e4632;
+	margin-bottom: 20px;
+	position: relative;
+	padding-bottom: 15px;
+	border-bottom: 2px solid #1e4632;
+}
+
+.about-text {
+	font-size: 17px;
+	line-height: 1.8;
+	color: #444;
+	margin-bottom: 25px;
+}
+
+.feature {
+	display: flex;
+	align-items: center;
+	margin-bottom: 15px;
+}
+
+.feature i {
+	width: 30px;
+	height: 30px;
+	background: #1e4632;
+	color: white;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-right: 15px;
+	font-size: 14px;
+}
+
+.about-button {
+	display: inline-block;
+	padding: 14px 30px;
+	background: #1e4632;
+	color: white;
+	text-decoration: none;
+	border-radius: 30px;
+	font-weight: 600;
+	transition: all 0.3s ease;
+	margin-top: 10px;
+	border: 2px solid #1e4632;
+}
+
+.about-button:hover {
+	background: transparent;
+	color: #1e4632;
+}
+
+/* Elementi decorativi */
+.circle {
+	position: absolute;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.circle-1 {
+	width: 200px;
+	height: 200px;
+	top: -50px;
+	left: -50px;
+}
+
+.circle-2 {
+	width: 150px;
+	height: 150px;
+	bottom: -40px;
+	right: -40px;
+}
+
+.col-lg-12.propertype {
+	margin-bottom: 15px;
+}
+
+.row {
+	display: block;
+	width: 100%;
+	margin-bottom: 30px;
+	/* Più spazio tra le righe */
+	border-bottom: 1px solid #eee;
+	/* Opzionale: separatore */
+	padding-bottom: 20px;
+	/* Spazio sotto ogni proprietà */
+}
+
+/* Se usi flexbox, imposta a 100% */
+.row {
+	display: flex;
+	/*flex-direction: column;*/
+}
+
+/* Se gli elementi interni hanno width fissi, impostali al 100% */
+.row>* {
+	width: 100%;
+	max-width: 100%;
+}
+
+/* Responsive design */
+@media (max-width: 992px) {
+	.container-about {
+		flex-direction: column;
+	}
+
+	.left-column,
+	.right-column {
+		flex: 0 0 100%;
+	}
+
+	.left-column {
+		padding: 30px 20px;
+	}
+
+	.right-column {
+		padding: 40px 30px;
+	}
+}
+
+@media (max-width: 600px) {
+	.about-title {
+		font-size: 28px;
+	}
+
+	.about-text {
+		font-size: 16px;
+	}
+	.left-column {
+		padding: 0px 0px;
+	}
+	.right-column {
+        padding: 25px 0px;
+    }
+    .info-section {
+        padding: 20px 20px 20px 20px;
+    }
+    .contact-info {
+        margin-bottom: 25px;
+        padding: 20px 0px 0px 0px;
+    }
+    .apartments-section {
+        margin: 0px 0px;
+    }
+    .footer .col-lg-4 {
+	    max-width: 100% !important;
+    }
+}
+
+/*INIZIO SWIPER GALLERY*/
+/* CSS per la visualizzazione corretta di Swiper */
+.swiper-container {
+	width: 100%;
+	height: 300px;
+	/* Imposta l'altezza desiderata per lo slider principale */
+}
+
+.swiper-slide {
+	text-align: center;
+}
+
+.swiper-slide img {
+	width: 100%;
+	height: 100%;
+	max-height:400px;
+	object-fit: cover;
+}
+
+.mySwiper2 { 
+	height: 80px;
+	/* Altezza per le miniature */
+	box-sizing: border-box;
+	padding: 10px 0;
+}
+
+.mySwiper2 .swiper-slide {
+	width: 25% !important;
+	/* Larghezza delle miniature */
+	opacity: 0.4;
+}
+
+.mySwiper2 .swiper-slide-thumb-active {
+	opacity: 1;
+}
+
+.footer .col-lg-4 {
+	max-width: 33%;
+}
+
+.media-section .col-lg-4 {
+	max-width: 100% !important;
+	margin:0 auto;
+}
+
+.property-card .property-card-header {
+	height: 280px;
+}
+
+ .container-separator {
+    background-color: #ffffff;
+    min-height: 5px;
+    margin-top:50px;
+}
+.agent-item{
+	text-align: center;
+	margin-bottom: 15px;
+}
+.agent-item .name{
+	margin-top: 5px;
+    display: block;
+}
+
+.agents-list {
+	margin-right: -15px;
+	margin-left: -15px;
+}
+.agents-list .row{
+	margin-left: 0;
+	margin-right: 0;
+	border: 0;
+}
+.agent-item a {
+	color: #fff;
+}
+.agent-item img {
+	width: 100%;
+	min-height: 120px;
+}
+@media (max-width: 768px) {
+    .agents-list .col-md-6 {
+        -webkit-box-flex: 0;
+        -webkit-flex: 0 0 50%;
+        -ms-flex: 0 0 50%;
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+}
+
+
+
+
+
+
+
+
+#scroll-description-box {
+    display: block !important;
+    max-height: 350px !important; 
+    overflow-y: auto !important; /* 'auto' la mostra solo se il testo è lungo */
+    overflow-x: hidden !important;
+    padding: 0 15px 0 0 !important; /* Padding solo a destra per non toccare la scrollbar */
+    background: #ffffff !important; /* Sfondo bianco */
+    border: none !important;       /* Rimuove i bordi */
+    box-shadow: none !important;    /* Rimuove eventuali ombre */
+}
+
+/* --- STILE SCROLLBAR (Per renderla ben visibile) --- */
+
+/* 1. Larghezza della barra */
+#scroll-description-box::-webkit-scrollbar {
+    width: 10px !important;
+}
+
+/* 2. Lo sfondo della barra (binario) */
+#scroll-description-box::-webkit-scrollbar-track {
+    background: #f1f1f1 !important; 
+    border-radius: 10px !important;
+}
+
+/* 3. La parte che scorre (il cursore) */
+#scroll-description-box::-webkit-scrollbar-thumb {
+    background: #c1c1c1 !important; /* Grigio medio, ben visibile su bianco */
+    border-radius: 10px !important;
+    border: 2px solid #f1f1f1 !important; /* Crea un effetto distanziato */
+}
+
+/* 4. Effetto quando ci passi sopra col mouse */
+#scroll-description-box::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8 !important; 
+}

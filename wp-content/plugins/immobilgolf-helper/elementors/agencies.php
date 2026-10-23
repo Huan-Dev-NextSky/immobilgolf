@@ -152,7 +152,7 @@ class Immobilgolf_Agencies_Element extends \Elementor\Widget_Base
 		
 		$curl = curl_init();
 		curl_setopt_array($curl, array(
-			CURLOPT_URL => 'https://portal.exileart.it/index.php/frontend/agencies/it',
+			CURLOPT_URL => 'https://portal.immobilgolf.com/index.php/frontend/agencies/it',
 			CURLOPT_RETURNTRANSFER => true,
 			CURLOPT_ENCODING => '',
 			CURLOPT_MAXREDIRS => 10,

@@ -6,6 +6,8 @@
  * @copyright Copyright (c) 2016 UniteCMS
  * @license http://www.gnu.org/licenses/gpl-2.0.html GNU/GPLv2 or later
 */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 
 //no direct accees
 defined ('UNLIMITED_ELEMENTS_INC') or die ('restricted aceess');
@@ -52,8 +54,15 @@ class UniteCreatorWpmlIntegrate{
 		if($this->isInited == true)
 			return(false);
 		
-		$this->arrLanguages = apply_filters( 'wpml_active_languages',NULL);
 		
+		global $sitepress;
+		
+		if(!empty($sitepress))
+		  $this->arrLanguages = $sitepress->get_active_languages();
+		else
+		   // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
+		   $this->arrLanguages = apply_filters( 'wpml_active_languages',NULL);
+				
 		if(empty($this->arrLanguages))
 			$this->arrLanguages = array();
 		
@@ -62,13 +71,15 @@ class UniteCreatorWpmlIntegrate{
 		
 		$this->arrShortPrefix["__none__"] = __("Not Selected","unlimited-elements-for-elementor");
 
+		$this->activeLanguage = $sitepress->get_current_language();
 		
 		//set active and short
 		foreach($this->arrLanguages as $language){
 			
 			$code = UniteFunctionsUC::getVal($language, "code");
 			$isActive = UniteFunctionsUC::getVal($language, "active");
-			if($isActive == true){
+			
+			if($isActive == true && empty($this->activeLanguage)){
 				$this->activeLanguage = $code;
 			}
 			
@@ -131,6 +142,7 @@ class UniteCreatorWpmlIntegrate{
 		return($this->activeLanguage);
 	}
 	
+	
 	/**
 	 * get translated attachment id for media translation
 	 */
@@ -140,18 +152,27 @@ class UniteCreatorWpmlIntegrate{
 			return($thumbID);
 		
 		if(empty(self::$objWpmlSingleton)){
+			
 			self::$objWpmlSingleton = new UniteCreatorWpmlIntegrate();
 			self::$objWpmlSingleton->init();
 		}
 		
 		if(empty(self::$objWpmlSingleton->activeLanguage))
 			return($thumbID);
-			
+		
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
+		$current_lang = apply_filters( 'wpml_current_language', null );             
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
+		$default_lang = apply_filters( 'wpml_default_language', null );  
+		
+		if ( $current_lang === $default_lang )
+			return($thumbID);	
+		
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 		$alternateThumbID = apply_filters( 'wpml_object_id', $thumbID, 'attachment', FALSE, self::$objWpmlSingleton->activeLanguage); 		
 		
 		if(empty($alternateThumbID))
 			return($thumbID);
-		
 		
 		return($alternateThumbID);
 	}
@@ -167,6 +188,7 @@ class UniteCreatorWpmlIntegrate{
 		foreach($params as $param){
 			
 			$type = UniteFunctionsUC::getVal($param, "type");
+
 			
 			$editorType = null;
 						
@@ -213,6 +235,21 @@ class UniteCreatorWpmlIntegrate{
 		
 		return($arrFields);
 	}
+
+	/**
+	 * 
+	 * get sorting params items
+	 */
+	private function getSortingFilterItemsParams(){
+		
+		$arrParamsItems = array();
+				
+		$settingsItems = HelperProviderUC::getSortFilterRepeaterFields();
+		$arrParamsItems = $settingsItems->getSettingsCreatorFormat();
+
+		
+		return($arrParamsItems);
+	}
 	
 	
 	/**
@@ -224,7 +261,6 @@ class UniteCreatorWpmlIntegrate{
 		
 		if(empty($arrAddonsRecords))
 			return(false);
-		
 		
 		foreach($arrAddonsRecords as $record){
 			
@@ -253,6 +289,18 @@ class UniteCreatorWpmlIntegrate{
 				$arrItemsFields = $this->getTranslatableParamsFields($widgetTitle, $paramsItems, true);
 			}
 			
+			
+			//special case for sorting filter
+			$isSortingFilterExists = $addon->isSpecialParamExists("sort_filter_fields");
+
+			if($isSortingFilterExists == true){
+				
+				$paramsItems = $this->getSortingFilterItemsParams($addon);
+								
+				$arrItemsFields = $this->getTranslatableParamsFields($widgetTitle, $paramsItems, true);
+			}
+			
+				
 			if(empty($arrFields) && empty($arrItemsFields))
 				continue;
 
@@ -279,8 +327,8 @@ class UniteCreatorWpmlIntegrate{
 				$className = "UE_WPML_INTEGRATION__".$addonName;
 				 
 				if($isWPMLExists == true && class_exists($className) == false){
-					// class_alias('UNITE_CREATOR_WPML_Translation_Module', $className);
-					$code = "class {$className} extends UNITE_CREATOR_WPML_Translation_Module{}";
+					// class_alias('UELM_UNITE_CREATOR_WPML_Translation_Module', $className);
+					$code = "class {$className} extends UELM_UNITE_CREATOR_WPML_Translation_Module{}";
 					// phpcs:ignore Generic.PHP.ForbiddenFunctions.Found
 					eval($code);
 				}				
@@ -308,8 +356,9 @@ class UniteCreatorWpmlIntegrate{
 		
 		$defaultLang    = $this->getDefaultSiteLanguage();
 		$activeLang     = $this->getActiveLanguage();
-
+		
 		if ($stickyPostDefaultLangOption == true && $activeLang != $defaultLang){
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 			do_action('wpml_switch_language', $defaultLang);
 			add_action("ue_after_custom_posts_query", array($this, "setActiveLanguageAfterGetStickyPostsBasedOnDefaultLanguage"));
 		}
@@ -325,6 +374,7 @@ class UniteCreatorWpmlIntegrate{
 	 */
 	public function setActiveLanguageAfterGetStickyPostsBasedOnDefaultLanguage() {
 		$activeLang     = $this->getActiveLanguage();
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 		do_action('wpml_switch_language', $activeLang);
 	}
 

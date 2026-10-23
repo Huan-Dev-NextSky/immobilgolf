@@ -784,6 +784,8 @@ if ( ! class_exists( 'Tribe__PUE__Checker' ) ) {
 		/**
 		 * Inserts license key fields on license key page
 		 *
+		 * @since 6.9.4 Added upsell links for Promoter and Seating.
+		 *
 		 * @param array $fields List of fields.
 		 *
 		 * @return array Modified list of fields.
@@ -802,11 +804,19 @@ if ( ! class_exists( 'Tribe__PUE__Checker' ) ) {
 			];
 
 			$no_license_tooltip = esc_html__( 'A valid license key is required for support and updates', 'tribe-common' );
+
 			if ( 'event-aggregator' === $this->get_slug() ) {
 				$no_license_tooltip = sprintf(
 				/* Translators: %1$s and %2$s are opening and closing <a> tags, respectively. */
 					esc_html__( '%1$sBuy a license%2$s for the Event Aggregator service to access additional import features.', 'tribe-common' ),
-					'<a href="https://evnt.is/196y" target="_blank">',
+					'<a href="https://evnt.is/1bee" target="_blank">',
+					'</a>'
+				);
+			} elseif ( 'promoter' === $this->get_slug() ) {
+				$no_license_tooltip = sprintf(
+				/* Translators: %1$s and %2$s are opening and closing <a> tags, respectively. */
+					esc_html__( '%1$sBuy a license%2$s for the Promoter service to access additional marketing features.', 'tribe-common' ),
+					'<a href="https://evnt.is/1bef" target="_blank">',
 					'</a>'
 				);
 			}
@@ -1226,6 +1236,23 @@ if ( ! class_exists( 'Tribe__PUE__Checker' ) ) {
 
 			if ( empty( $key ) ) {
 				return [];
+			}
+
+			/**
+			 * Filter early license key validation before remote PUE checks.
+			 *
+			 * Returning a non-null array short-circuits remote validation and is used as
+			 * the AJAX/validation response. Return null to continue normal validation.
+			 *
+			 * @since 6.12.3
+			 *
+			 * @param array|null          $response Early response, or null to continue.
+			 * @param string              $key      The license key being validated.
+			 * @param Tribe__PUE__Checker $checker  The PUE checker instance.
+			 */
+			$pre_validate = apply_filters( 'tec_common_pue_pre_validate_key', null, $key, $this );
+			if ( is_array( $pre_validate ) ) {
+				return $pre_validate;
 			}
 
 			$uplink_resource = $this->get_uplink_resource( $this->get_slug() );

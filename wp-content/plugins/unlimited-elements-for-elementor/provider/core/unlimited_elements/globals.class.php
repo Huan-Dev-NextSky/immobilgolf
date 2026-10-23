@@ -22,7 +22,7 @@ class GlobalsUnlimitedElements{
 	
 	public static $gutenbergArrFilterCats = array("Loop Builder");
 	
-	public static $showAdminNotices = false;		//show the banner
+	public static $showAdminNotices = true;		//show the banner
 	public static $debugAdminNotices = false;
 	
 	public static $blackFridayMode = false;
@@ -45,12 +45,16 @@ class GlobalsUnlimitedElements{
 	
 	public static $enableEditProOptions = false;	 //set to enable edit pro options
 	
-	//public static $insideNotificationText = "🖤 Black Friday Sale! <br> Don’t Miss Out on the <br> BIGGEST SALE of the Year! 🎉<br> <a style='text-decoration:underline;' href='https://unlimited-elements.com/pricing/' target='_blank'>Get Deal Now!</a> ";
+	public static $enableSchema = true;	//enable the schema!
+	public static $enableCustomSchema = true;	//enable the custom schema
+	
+	public static $enableSerpAPI = true;	//enable the serp api output
+	
+	//public static $insideNotificationText = "<b>Black Friday Deal</b>! <br> Limited Time Offer for <b>Pro Version</b> <br> Best Deal Of The Year! <br> <a style='text-decoration:underline;' href='https://unlimited-elements.com/pricing/' target='_blank'>Get 50% Off Now</a> ";
+	
 	public static $insideNotificationText = "Unlock Access To All Pro Widgets and Features.  <a href='https://unlimited-elements.com/pricing/' target='_blank'>Upgrade Now</a> ";
 	public static $insideNotificationUrl = "https://unlimited-elements.com/pricing/";
-	
-	
-
+		
 	const PLUGIN_NAME = "unlimitedelements";
 	const VIEW_DASHBOARD = "dashboard";
 	const VIEW_ADDONS_ELEMENTOR = "addons_elementor";
@@ -128,10 +132,7 @@ class GlobalsUnlimitedElements{
 		self::$urlAccount = admin_url("admin.php?page=unlimitedelements-account");
 
 		UniteProviderFunctionsUC::addAction('admin_init', array("GlobalsUnlimitedElements", 'initAdminNotices'));
-		
-		if(GlobalsUC::$is_admin == true && HelperUC::hasPermissionsFromQuery("showadminnotices"))
-			self::$debugAdminNotices = true;
-		
+				
 			
 		//set paths
 		
@@ -204,7 +205,8 @@ class GlobalsUnlimitedElements{
 		
 		if(self::$isGutenbergOnly == true)
 			GlobalsUC::$url_buy_platform = GlobalsUC::URL_BUY."?platform=wordpress";
-		
+
+
 	}
 	
 	
@@ -212,18 +214,27 @@ class GlobalsUnlimitedElements{
 	 * init the admin notices
 	 */
 	public static function initAdminNotices(){
-
+				
 		if(GlobalsUnlimitedElements::$showAdminNotices === false)
 			return;
 		
+	   //debug admin notices toggle in query string	
+	   if(HelperUC::hasPermissionsFromQuery("showadminnotices"))
+		self::$debugAdminNotices = true;
+
+
 		$arrBanners = array();
 		
 		if(self::$blackFridayMode == true)
 			$arrBanners[] = new UCAdminNoticeBFBanner();
 		
-//			new UCAdminNoticeSimpleExample(),
-//			new UCAdminNoticeDoubly(),
-//			new UCAdminNoticeRating(),
+			//new UELM_AdminNoticeSimpleExample();
+		
+		//$arrBanners[] = new UCAdminNoticeDoubly();
+
+		$arrBanners[] = new UCAdminNoticeSheetsPilot();
+		
+//		new UELM_AdminNoticeRating(),
 		
 		UCAdminNotices::init($arrBanners);
 

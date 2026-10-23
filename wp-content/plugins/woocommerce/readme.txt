@@ -1,10 +1,10 @@
 === WooCommerce ===
 Contributors: automattic, woocommerce, mikejolley, jameskoster, claudiosanches, rodrigosprimo, peterfabian1000, vedjain, jamosova, obliviousharmony, konamiman, sadowski, wpmuguru, royho, barryhughes-1, claudiulodro, tiagonoronha, ryelle, levinmedia, aljullu, nerrad, joshuawold, assassinateur, haszari, mppfeiffer, nielslange, opr18, ralucastn, tjcafferkey, danielwrobert, patriciahillebrandt, albarin, dinhtungdu, imanish003, karolmanijak, sunyatasattva, alexandrelara, gigitux, danieldudzic, samueljseay, alexflorisca, opr18, tarunvijwani, pauloarromba, saadtarhi, bor0, kloon, coreymckrill, jorgeatorres, leifsinger, neosinner
 Tags: online store, ecommerce, shop, shopping cart, sell online
-Requires at least: 6.7
-Tested up to: 6.8
+Requires at least: 7.0
+Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 10.1.0
+Stable tag: 11.2.0
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -128,11 +128,11 @@ Request new features and extensions and vote on existing suggestions on our offi
 
 = WooCommerce is awesome! Can I contribute? =
 
-Yes, you can! Join in on our [GitHub repository](https://github.com/woocommerce/woocommerce/?utm_medium=referral&utm_source=wordpress.org&utm_campaign=wp_org_repo_listing) and follow the [development blog](https://woocommerce.wordpress.com/?utm_medium=referral&utm_source=wordpress.org&utm_campaign=wp_org_repo_listing) to stay up-to-date with everything happening in the project.
+Yes, you can! Join in on our [GitHub repository](https://github.com/woocommerce/woocommerce/?utm_medium=referral&utm_source=wordpress.org&utm_campaign=wp_org_repo_listing) and follow the [development blog](https://developer.woocommerce.com/?utm_medium=referral&utm_source=wordpress.org&utm_campaign=wp_org_repo_listing) to stay up-to-date with everything happening in the project.
 
 = Where can I find REST API documentation? =
 
-Extensive [WooCommerce REST API Documentation](https://woocommerce.github.io/woocommerce-rest-api-docs/?utm_medium=referral&utm_source=wordpress.org&utm_campaign=wp_org_repo_listing) is available on GitHub.
+Extensive [WooCommerce REST API Documentation](https://developer.woocommerce.com/docs/apis/rest-api/?utm_medium=referral&utm_source=wordpress.org&utm_campaign=wp_org_repo_listing) is available.
 
 = My question is not listed here. Where can I find more answers? =
 
@@ -144,7 +144,7 @@ Check out [Frequently Asked Questions](https://woocommerce.com/document/frequent
 
 * PHP 7.4 or greater is required (PHP 8.0 or greater is recommended)
 * MySQL 5.5.5 or greater, OR MariaDB version 10.1 or greater, is required
-* WordPress 6.7 or greater
+* WordPress 7.0 or greater
 * (Recommended) WordPress [memory limit](https://woocommerce.com/document/increasing-the-wordpress-memory-limit/) of 256 MB or greater.
 * (Recommended) [HTTPS](https://woocommerce.com/document/ssl-and-https/) support.
 
@@ -170,17 +170,12 @@ WooCommerce comes with some sample data you can use to see how products look; im
 
 == Changelog ==
 
-= 10.1.1 2025-08-20 =
+= 11.2.1 2026-10-09 =
 
 **WooCommerce**
 
-* Fix - Ensure recurring actions are registered and dependent classes are loaded as needed [#60417](https://github.com/woocommerce/woocommerce/pull/60417)
-* Fix - Fix filtering offline payment methods settings pages to be rendered in legacy mode. [#60432](https://github.com/woocommerce/woocommerce/pull/60432)
-* Fix - Fix spacing in tax line in the order summary [#60469](https://github.com/woocommerce/woocommerce/pull/60469)
-* Fix - Prevent skeleton display when an express payment method is active to avoid unmounting express buttons [#60394](https://github.com/woocommerce/woocommerce/pull/60394)
-* Fix - Use dynamically-generated URLs for resetting accounts and switching to live accounts in the Payments NOX. [#60329](https://github.com/woocommerce/woocommerce/pull/60329)
-* Fix - Fix flat shipping rate validation breaking advanced shipping rate formula input [#60348](https://github.com/woocommerce/woocommerce/pull/60348)
-* Enhancement - Set the ‘Set up payments’ task to in-progress state upon starting live WooPayments onboarding. [#60329](https://github.com/woocommerce/woocommerce/pull/60329)
+* Fix - Restore how the classic checkout sends order review and coupon requests, so fields removed with checkout field filters are no longer sent as empty values. [#69649](https://github.com/woocommerce/woocommerce/pull/69649)
+* Fix - Accept legacy four-digit Argentine postcodes in the Checkout block again. [#69662](https://github.com/woocommerce/woocommerce/pull/69662)
 
 
 [See changelog for all versions](https://raw.githubusercontent.com/woocommerce/woocommerce/trunk/changelog.txt).

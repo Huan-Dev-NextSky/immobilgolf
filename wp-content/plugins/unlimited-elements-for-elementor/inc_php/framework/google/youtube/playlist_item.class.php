@@ -1,6 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) exit;
 
-class UEGoogleAPIPlaylistItem extends UEGoogleAPIModel{
+class UELM_GoogleAPIPlaylistItem extends UELM_GoogleAPIModel{
 
 	const IMAGE_SIZE_DEFAULT = "default";
 	const IMAGE_SIZE_MEDIUM = "medium";
@@ -41,7 +42,8 @@ class UEGoogleAPIPlaylistItem extends UEGoogleAPIModel{
 	public function getDescription($asHtml = false){
 
 		$description = $this->getSnippetValue("description");
-
+		$description = UniteFunctionsUC::sanitizeHTMLRemoveJS($description);
+	
 		if($asHtml === true)
 			$description = nl2br($description);
 
@@ -73,11 +75,31 @@ class UEGoogleAPIPlaylistItem extends UEGoogleAPIModel{
 	 */
 	public function getImageUrl($size){
 
-		$images = $this->getSnippetValue("thumbnails");
+		$images = $this->getSnippetValue("thumbnails", array());
 		$image = UniteFunctionsUC::getVal($images, $size, array());
 		$url = UniteFunctionsUC::getVal($image, "url");
 
-		return $url;
+		if(empty($url) === false)
+			return $url;
+
+		// fallback if requested size is missing (e.g. maxres)
+		$fallbackSizes = array(
+			self::IMAGE_SIZE_MAX,
+			"standard",
+			self::IMAGE_SIZE_HIGH,
+			self::IMAGE_SIZE_MEDIUM,
+			self::IMAGE_SIZE_DEFAULT,
+		);
+
+		foreach($fallbackSizes as $fallbackSize){
+			$image = UniteFunctionsUC::getVal($images, $fallbackSize, array());
+			$url = UniteFunctionsUC::getVal($image, "url");
+
+			if(empty($url) === false)
+				return $url;
+		}
+
+		return "";
 	}
 
 	/**
@@ -88,6 +110,11 @@ class UEGoogleAPIPlaylistItem extends UEGoogleAPIModel{
 	public function getVideoId(){
 
 		$id = $this->getDetailsValue("videoId");
+
+		if(empty($id) === true){
+			$resourceId = $this->getSnippetValue("resourceId", array());
+			$id = UniteFunctionsUC::getVal($resourceId, "videoId");
+		}
 
 		return $id;
 	}
@@ -154,3 +181,5 @@ class UEGoogleAPIPlaylistItem extends UEGoogleAPIModel{
 	}
 
 }
+
+class_alias( UELM_GoogleAPIPlaylistItem::class, 'UEGoogleAPIPlaylistItem' );

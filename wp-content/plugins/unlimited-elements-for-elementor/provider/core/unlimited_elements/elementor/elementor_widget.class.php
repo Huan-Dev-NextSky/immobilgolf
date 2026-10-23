@@ -4,7 +4,6 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 use Elementor\Widget_Base;
 use Elementor\Controls_Manager;
-use Elementor\Scheme_Color;
 use Elementor\Group_Control_Typography;
 use Elementor\Group_Control_Text_Stroke;
 use Elementor\Group_Control_Border;
@@ -12,12 +11,12 @@ use Elementor\Group_Control_Background;
 use Elementor\Group_Control_Text_Shadow;
 use Elementor\Group_Control_Box_Shadow;
 use Elementor\Group_Control_Css_Filter;
-use Elementor\Core\Schemes;
+use Elementor\Core\Kits\Documents\Tabs\Global_Typography;
 use Elementor\Repeater;
 use Elementor\Utils;
 
 
-class UniteCreatorElementorWidget extends Widget_Base {
+class UELM_CreatorElementorWidget extends Widget_Base {
 
     protected $objAddon;
 	
@@ -27,6 +26,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
     private $isNoMemory_addonName;
     private $listingName;
     private static $arrGlobalColors = array();
+    private static $importAssetUrls = array();
     protected $isBGWidget = false;
 	protected $objControls;
 	protected $isAddSapBefore = false;
@@ -42,7 +42,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
     private function a_______INIT______(){}
 
-
+	
     /**
      * set the addon
      */
@@ -83,15 +83,14 @@ class UniteCreatorElementorWidget extends Widget_Base {
 		}
 
 		$options = $this->objAddon->getOptions();
-
-
+		
 		/*
 		$isPostListExists = $this->objAddon->isParamTypeExists(UniteCreatorDialogParam::PARAM_POSTS_LIST);
 
 		if($isPostListExists == true)
 			return(GlobalsUnlimitedElements::LINK_HELP_POSTSLIST);
 		*/
-
+	
 		return(null);
 	}
 
@@ -114,7 +113,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
     }
 
-
+	
     /**
      * init by addon
      */
@@ -326,8 +325,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
     	if($this->isNoMemory == true)
     		return($this->isNoMemory_addonName. "(no memory)");
-
-
+		
     	if($this->isConsolidated)
     		$title = $this->objCat->getTitle();
     	else
@@ -344,23 +342,21 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
     	if($this->isNoMemory == true)
     		return(array());
-
-
+		
     	if($this->isConsolidated == true){
 
     		$arrHandles = array();
     		foreach($this->arrAddons as $objAddon)
     			$arrHandles = $this->ucGetAddonDepents($objAddon, $arrHandles);
-
     	}
     	else
     		$arrHandles = $this->ucGetAddonDepents($objAddon);
-
+		
     	$arrHandles = array_values($arrHandles);
 
     	return($arrHandles);
     }
-
+	
     private function a___________ADD_CONTROLS__________(){}
 
 
@@ -400,6 +396,13 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
 		    	if(GlobalsUnlimitedElements::$isImporting == true)
     				$value = "";
+
+    			if(is_numeric($value))
+    				$value = array("id"=>$value);
+    			else
+    				$value = array("url"=>$value);
+    		break;
+    		case UniteCreatorDialogParam::PARAM_FILE:
 
     			if(is_numeric($value))
     				$value = array("id"=>$value);
@@ -476,7 +479,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
     }
 
-
+	
     /**
      * modify default items data, to make in elementor way
      */
@@ -493,7 +496,8 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
     	return $arrItemsData;
     }
-
+	
+    
     /**
      * modify items controls
      * add !important for better css generation, sometimes it's before the 
@@ -562,13 +566,16 @@ class UniteCreatorElementorWidget extends Widget_Base {
     	$itemsHeading = $this->objAddon->getOption("items_section_heading");
     	$itemsHeading = trim($itemsHeading);
 
+    	$allowEmpty = $this->objAddon->getOption("items_allow_empty");    	    	    	    	
+    	$allowEmpty = UniteFunctionsUC::strToBool($allowEmpty);
+    	
     	$titleField = $this->objAddon->getOption("items_title_field");
     	$titleField = trim($titleField);
-
+	
 
     	if(!empty($itemsTitle))
     		$itemsLabel = $itemsTitle;
-
+	
     	 if($this->isBGWidget == false){
 
 	    	//add multisource condition
@@ -584,14 +591,12 @@ class UniteCreatorElementorWidget extends Widget_Base {
 	    		$arrSection["condition"] = $condition;
 	    	}
 
-
 	        $this->start_controls_section('section_items', $arrSection);
-
     	 }
-
+		
           //add heading label text
           if(!empty($itemsHeading)){
-
+	
 			$this->add_control(
 				'uc_item_section_heading10',
 				array(
@@ -716,7 +721,12 @@ class UniteCreatorElementorWidget extends Widget_Base {
          $arrItemsControl = array();
          $arrItemsControl["type"] = Controls_Manager::REPEATER;
          $arrItemsControl["fields"] = $repeater->get_controls();
-
+         
+        //allow empty items
+        if($allowEmpty == true)
+        	$arrItemsControl["prevent_empty"] = false;
+		
+         
          if(!empty($titleField))
          	$arrItemsControl["title_field"] = $titleField;
 
@@ -993,6 +1003,9 @@ class UniteCreatorElementorWidget extends Widget_Base {
     		case UniteCreatorDialogParam::PARAM_IMAGE:
     			$controlType = Controls_Manager::MEDIA;
     		break;
+    		case UniteCreatorDialogParam::PARAM_FILE:
+    			$controlType = Controls_Manager::MEDIA;
+    		break;
     		case UniteCreatorDialogParam::PARAM_HR:
     			//$controlType = "uc_hr";
     			$controlType = Controls_Manager::DIVIDER;
@@ -1075,7 +1088,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
     		break;
     		default:
-
+		
     			$addonTitle = $this->objAddon->getTitle();
 
     			dmp("param not found in widget: $addonTitle");
@@ -1127,6 +1140,42 @@ class UniteCreatorElementorWidget extends Widget_Base {
     				$arrControl['media_type'] = 'application/json';
     				$arrControl['default'] = $defaultValue;
     			}
+
+    		break;
+    		case UniteCreatorDialogParam::PARAM_FILE:
+
+    			$fileTypes = array();
+    			if(UniteFunctionsUC::strToBool(UniteFunctionsUC::getVal($param, "file_type_application")) === true)
+    				$fileTypes[] = "application";
+    			if(UniteFunctionsUC::strToBool(UniteFunctionsUC::getVal($param, "file_type_image")) === true)
+    				$fileTypes[] = "image";
+    			if(UniteFunctionsUC::strToBool(UniteFunctionsUC::getVal($param, "file_type_video")) === true)
+    				$fileTypes[] = "video";
+    			if(UniteFunctionsUC::strToBool(UniteFunctionsUC::getVal($param, "file_type_svg")) === true)
+    				$fileTypes[] = "svg";
+
+    			if(empty($fileTypes))
+    				$fileTypes = array("application", "image", "video", "svg");
+
+    			$mediaTypes = array();
+    			$mimeTypes = array();
+    			foreach($fileTypes as $type){
+    				if($type === "svg"){
+    					$mediaTypes[] = "image";
+    					$mimeTypes[] = "image/svg+xml";
+    				}else{
+    					$mediaTypes[] = $type;
+    				}
+    			}
+
+    			$mediaTypes = array_values(array_unique($mediaTypes));
+    			if(count($mediaTypes) == 1)
+    				$arrControl["media_type"] = $mediaTypes[0];
+    			else
+    				$arrControl["media_type"] = $mediaTypes;
+
+    			if(!empty($mimeTypes))
+    				$arrControl["mime_types"] = array_values(array_unique($mimeTypes));
 
     		break;
     		case UniteCreatorDialogParam::PARAM_POST_SELECT:
@@ -1774,7 +1823,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
     				$arrControl["title_field"] = $titleField;
 
     			$arrParamsItems = $settingsItems->getSettingsCreatorFormat();
-
+				
     			foreach($arrParamsItems as $itemParam)
     				$this->addElementorParamUC($itemParam, $repeater);
 
@@ -1786,9 +1835,9 @@ class UniteCreatorElementorWidget extends Widget_Base {
  				$arrControl["fields"] = $repeater->get_controls();
 
          		$arrControl["default"] = $arrItemValues;
-
+		
          		$arrControl["prevent_empty"] = false;
-
+				
     		break;
     	}
 
@@ -1802,11 +1851,12 @@ class UniteCreatorElementorWidget extends Widget_Base {
     		case UniteCreatorDialogParam::PARAM_BORDER:
     		case UniteCreatorDialogParam::PARAM_BACKGROUND:
     		case UniteCreatorDialogParam::PARAM_CSS_FILTERS:
-
+				
     			$selector = UniteFunctionsUC::getVal($param, "selector");
     			if(!empty($selector)){
+    				    				
     				$selector = $this->addWrapperToSelector($selector);
-
+    				
     				$arrControl["selector"] = $selector;
     			}
 
@@ -1904,7 +1954,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
     	$selector = trim($selector);
     	$selector = "{{WRAPPER}} $selector";
-
+		
     	//handle the commas
     	if(strpos($selector, ",") === false)
     		return($selector);
@@ -1977,7 +2027,10 @@ class UniteCreatorElementorWidget extends Widget_Base {
     	$arrControl = array();
     	$arrControl["name"] = $controlName;
     	$arrControl["selector"] = $selector;
-    	$arrControl["scheme"] = 3;
+    	
+    	$arrControl["global"] = array(
+    		"default" => Global_Typography::TYPOGRAPHY_TEXT,
+    	);
 
     	if(!empty($title))
     		$arrControl["label"] = $title;
@@ -1985,7 +2038,6 @@ class UniteCreatorElementorWidget extends Widget_Base {
     	if(!empty($elementorCondition)){
     		$arrControl["condition"] = $elementorCondition;
     	}
-
 
     	$this->objControls->add_group_control(Group_Control_Typography::get_type(), $arrControl);
 
@@ -1996,7 +2048,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
      * add elementor param
      */
     protected function addElementorParamUC($param, $objControls = null){
-
+		    	
     	if(empty($objControls))
     		$objControls = $this->objControls;
 
@@ -2018,6 +2070,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
     		break;
     		case UniteCreatorDialogParam::PARAM_INSTAGRAM:
     		case UniteCreatorDialogParam::PARAM_POST_TERMS:
+    		case UniteCreatorDialogParam::PARAM_META_SELECT:
     		case UniteCreatorDialogParam::PARAM_WOO_CATS:
     		case UniteCreatorDialogParam::PARAM_USERS:
     		case UniteCreatorDialogParam::PARAM_TEMPLATE:
@@ -2053,7 +2106,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
     			//add current posts settings
     			$param["add_current_posts"] = true;
-
+			
     			$settings = new UniteCreatorSettings();
 				$settings->setCurrentAddon($this->objAddon);
     			
@@ -2061,7 +2114,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
     			foreach($arrChildParams as $childParam)
     				$this->addElementorParamUC($childParam, $objControls);
-
+				
     		break;
     		case UniteCreatorDialogParam::PARAM_TYPOGRAPHY:
     			$this->addTypographyByParamUC($param);
@@ -2073,7 +2126,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
     			//add regular control
 
     			$arrControl = $this->getControlArrayUC($param);
-
+								
     			$type = UniteFunctionsUC::getVal($param, "type");
 
 				if(self::DEBUG_CONTROLS && $this->isBGWidget == false){
@@ -2094,12 +2147,12 @@ class UniteCreatorElementorWidget extends Widget_Base {
     				case UniteCreatorDialogParam::PARAM_CSS_FILTERS:
 
     					$groupType = $arrControl["type"];
-
+						    					
     					$values = $objControls->add_group_control($groupType, $arrControl);
 
     				break;
     				default:
-
+    					
     					//add control (responsive or not)
     					if(isset($arrControl["uc_responsive"])){
 
@@ -2315,15 +2368,44 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
     	return($params);
     }
-
+	
+    /**
+     * add schema controls
+     */
+    private function addSchemaControlsGlobal(){
+    	
+    	// get schema settings only 
+    	// add those settings into the controls 
+    	//$arrParamsItems = $settingsItems->getSettingsCreatorFormat();
+    	
+    	$objSettings = new UniteCreatorSettings();
+    	$objSchema = new UniteCreatorSchema();
+    	$objSchema->setObjAddon($this->objAddon);
+    	
+    	$objSchema->addSchemaMultipleSettings($objSettings);
+		
+		$arrSchemaParams = $objSettings->getSettingsCreatorFormat();
+		
+    	$this->start_controls_section("unlimited_schema", array(
+    		"label"=>__("Schema", 'unlimited-elements-for-elementor'),
+    		"tab"=>"general"));
+		
+    	foreach($arrSchemaParams as $param)
+    		$this->addElementorParamUC($param);
+    	
+    	$this->end_controls_section();
+    	
+    }
+    
+    
     /**
      * add pagination controls
      */
     protected function addPaginationControls($postListParam = null){
-
+		
     	$objPagination = new UniteCreatorElementorPagination();
     	$objPagination->addElementorSectionControls($this, $postListParam);
-
+		
     }
 
     /**
@@ -2334,7 +2416,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
     	$this->start_controls_section("unlimited_advanced_features", array(
     		"label"=>__("Advanced", 'unlimited-elements-for-elementor'),
     		"tab"=>"general"));
-
+	
        //update button if loaded from ajax
 		
        if(UniteCreatorElementorIntegrate::$enableEditHTMLButton === null){
@@ -2372,7 +2454,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
 			$debugTypeOptions["post_titles"] = __( 'Posts Titles', 'unlimited-elements-for-elementor' );
 			$debugTypeOptions["post_meta"] = __( 'Posts Titles and Meta', 'unlimited-elements-for-elementor' );
 		}
-
+		
 		$debugTypeOptions["current_post_data"] = __( 'Current Post Data', 'unlimited-elements-for-elementor' );
 		$debugTypeOptions["settings_values"] = __( 'Show Settings Values', 'unlimited-elements-for-elementor' );
 
@@ -2393,6 +2475,8 @@ class UniteCreatorElementorWidget extends Widget_Base {
 			);
 		}
 
+		do_action("uelm_widget_advanced_controls", $this);
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 		do_action("ue_widget_advanced_controls", $this);
 
     	$this->end_controls_section();
@@ -2563,7 +2647,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
          	$isNoSettings = true;
 
          $arrCatsAndParams = $this->sortParamsByCats($arrCats, $allParams);
-
+   		
          $hasPostsList = false;
 	     $postListParam = null;
 
@@ -2582,7 +2666,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
          	$arrSectionOptions["label"] = $catTitle;
 
          	$params = UniteFunctionsUC::getVal($arrCat, "params");
-
+		
          	if($catTab == "style")
          		$arrSectionOptions["tab"] = "style";
 
@@ -2608,8 +2692,8 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
 	          $activeTab = null;
 
-	          foreach($params as $index => $param){
-
+	          foreach($params as $index => $param){	          	
+	          	
 	          		$type = UniteFunctionsUC::getVal($param, "type");
 	          		if($type === UniteCreatorDialogParam::PARAM_POSTS_LIST){
 	          			$hasPostsList = true;
@@ -2625,7 +2709,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
 	          		}
 
 	          		if($type == UniteCreatorDialogParam::PARAM_LISTING){
-
+			
 	          			$useFor = UniteFunctionsUC::getVal($param, "use_for");
 	          			switch($useFor){
 	          				case "remote":
@@ -2788,14 +2872,18 @@ class UniteCreatorElementorWidget extends Widget_Base {
           if($isFontsEnabled == true)
           		$this->addFontControlsUC();
 
-
+		
           //add pagination section if needed
 
           if($hasPostsList == true){
+          	
           		$this->addPaginationControls($postListParam);
-
+				
+          		if(GlobalsUnlimitedElements::$enableSchema == true)
+          			$this->addSchemaControlsGlobal();
+          
           }else if($hasListing == true){
-
+		
           	$enablePagination = UniteFunctionsUC::getVal($listingParam, "enable_pagination");
           	$enablePagination = UniteFunctionsUC::strToBool($enablePagination);
 
@@ -2811,6 +2899,10 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
           	if($enablePagination == true)
           		$this->addPaginationControls($listingParam);
+
+          	if(GlobalsUnlimitedElements::$enableSchema == true)
+          		$this->addSchemaControlsGlobal();
+          	
           }
 
           $showMore = false;
@@ -2819,8 +2911,10 @@ class UniteCreatorElementorWidget extends Widget_Base {
 
           //add debug controls
           $this->addAdvancedSectionControls($showMore, $isItemsEnabled);
+		  
 
-
+          
+		
 		if(self::DEBUG_CONTROLS && $this->isBGWidget == false){
 
 			dmp("end debug");
@@ -3096,7 +3190,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
     * add addons dropdown
     */
    protected function ucRegisterControls_cat_addAddonsDropdown($meta){
-
+		
    		$arrOptions = array();
    		foreach($this->arrAddons as $objAddon){
    			$title = $objAddon->getTitle();
@@ -3159,8 +3253,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
 	        $isFontsEnabled = $objAddon->isFontsPanelEnabled();
 	    	$isItemsEnabled = $objAddon->isHasItems();
 	        $itemsType = $objAddon->getItemsType();
-
-
+	
    			$meta_addonsParams[$addonName] = array();
 
    			//add gallery param
@@ -3459,7 +3552,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
    		//skip controls when saving builder
     	if(UniteCreatorElementorIntegrate::$isSaveBuilderMode == true)
     		return(false);
-
+		
     	try{
 
     	  if($this->isConsolidated == true){
@@ -3789,7 +3882,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
     protected function modifyValuesBySwitchers($arrValues, $objAddon){
 
     	$paramsSwitchers = $objAddon->getParams(UniteCreatorDialogParam::PARAM_RADIOBOOLEAN);
-
+		
     	if(empty($paramsSwitchers))
     		return($arrValues);
 
@@ -4076,6 +4169,9 @@ class UniteCreatorElementorWidget extends Widget_Base {
 	        if($isDebugFromGet === true)
 	        	$isShowDebugData = true;
 
+	        if($isShowDebugData == true && HelperUC::canShowDebugOutput() == false)
+	        	$isShowDebugData = false;
+
 	        if($isShowDebugData == true){
 
 	        	$debugDataType = UniteFunctionsUC::getVal($arrValues, "widget_debug_data_type");
@@ -4157,7 +4253,7 @@ class UniteCreatorElementorWidget extends Widget_Base {
      * render the HTML
      */
     protected function render() {
-
+				
     	if(UniteCreatorElementorIntegrate::$isSaveBuilderMode == true){
 
     		uelm_echo("skip render: ".$this->get_name());
@@ -4206,4 +4302,203 @@ class UniteCreatorElementorWidget extends Widget_Base {
     */
 
 
+    private function a_______IMPORT_ASSETS______(){}
+
+
+    /**
+     * elementor calls this while importing a template, before media controls download images
+     */
+    public function on_import( $element ){
+
+    	if(empty($element["settings"]) || is_array($element["settings"]) == false)
+    		return($element);
+
+    	$savedUrls = array();
+    	$element["settings"] = $this->blankUnlimitedElementsAssetUrls($element["settings"], "", $savedUrls);
+
+    	$elementID = UniteFunctionsUC::getVal($element, "id");
+
+    	if(empty($elementID) == false && empty($savedUrls) == false)
+    		self::$importAssetUrls[$elementID] = $savedUrls;
+
+    	$this->set_settings($element["settings"]);
+
+    	return($element);
+    }
+
+
+    /**
+     * put the local asset urls back after elementor has skipped the download
+     */
+    public static function restoreImportAssetUrls( $elements ){
+
+    	if(empty(self::$importAssetUrls) || is_array($elements) == false)
+    		return($elements);
+
+    	$elements = self::restoreImportAssetUrlsRecursive($elements);
+
+    	self::$importAssetUrls = array();
+
+    	return($elements);
+    }
+
+
+    /**
+     * restore saved asset urls inside nested elements
+     */
+    private static function restoreImportAssetUrlsRecursive( $elements ){
+
+    	foreach($elements as $index => $element){
+
+    		if(empty($element["elements"]) == false && is_array($element["elements"]))
+    			$elements[$index]["elements"] = self::restoreImportAssetUrlsRecursive($element["elements"]);
+
+    		$elementID = UniteFunctionsUC::getVal($element, "id");
+
+    		if(empty($elementID) || empty(self::$importAssetUrls[$elementID]))
+    			continue;
+
+    		if(empty($elements[$index]["settings"]) || is_array($elements[$index]["settings"]) == false)
+    			continue;
+
+    		foreach(self::$importAssetUrls[$elementID] as $path => $url)
+    			$elements[$index]["settings"] = self::setSettingsUrlByPath($elements[$index]["settings"], $path, $url);
+    	}
+
+    	return($elements);
+    }
+
+
+    /**
+     * set a media url inside settings by a slash-separated path
+     */
+    private static function setSettingsUrlByPath( $settings, $path, $url ){
+
+    	$keys = explode("/", $path);
+
+    	if(empty($keys))
+    		return($settings);
+
+    	$lastKey = array_pop($keys);
+    	$target = &$settings;
+
+    	foreach($keys as $key){
+
+    		if(is_array($target) == false || array_key_exists($key, $target) == false){
+    			unset($target);
+    			return($settings);
+    		}
+
+    		$target = &$target[$key];
+    	}
+
+    	if(is_array($target) && array_key_exists($lastKey, $target) && is_array($target[$lastKey]))
+    		$target[$lastKey]["url"] = $url;
+
+    	unset($target);
+
+    	return($settings);
+    }
+
+
+    /**
+     * clear plugin and widget asset urls so elementor will not import them
+     */
+    private function blankUnlimitedElementsAssetUrls( $value, $path, &$savedUrls ){
+
+    	if(is_string($value))
+    		return($this->replaceAssetUrlInText($value));
+
+    	if(is_array($value) == false)
+    		return($value);
+
+    	$url = UniteFunctionsUC::getVal($value, "url");
+
+    	if(is_string($url) && $this->isImportedAssetUrl($url)){
+
+    		$savedUrls[$path] = $this->toLocalAssetUrl($url);
+    		$value["url"] = "";
+    		$value["id"] = "";
+
+    		return($value);
+    	}
+
+    	foreach($value as $key => $item){
+
+    		$itemPath = ($path === "") ? (string)$key : $path."/".$key;
+    		$value[$key] = $this->blankUnlimitedElementsAssetUrls($item, $itemPath, $savedUrls);
+    	}
+
+    	return($value);
+    }
+
+
+    /**
+     * return if the url points at a plugin image or a widget asset
+     */
+    private function isImportedAssetUrl( $url ){
+
+    	if(strpos($url, "/plugins/unlimited-elements-") !== false)
+    		return(true);
+
+    	if(strpos($url, "/uploads/ac_assets/") !== false)
+    		return(true);
+
+    	if(strpos($url, "/uploads/blox_assets/") !== false)
+    		return(true);
+
+    	return(false);
+    }
+
+
+    /**
+     * point an asset url at the same path on this site
+     */
+    private function toLocalAssetUrl( $url ){
+
+    	$path = wp_parse_url($url, PHP_URL_PATH);
+
+    	if(empty($path))
+    		return($url);
+
+    	$localBase = untrailingslashit(home_url());
+    	$localPath = wp_parse_url($localBase, PHP_URL_PATH);
+
+    	if(empty($localPath) == false && strpos($path, $localPath) === 0)
+    		$path = substr($path, strlen($localPath));
+
+    	return($localBase.$path);
+    }
+
+
+    /**
+     * replace asset urls inside text fields such as image attributes
+     */
+    private function replaceAssetUrlInText( $text ){
+
+    	if(strpos($text, "http") === false)
+    		return($text);
+
+    	$text = preg_replace_callback("#https?://[^\"'\\s]+#", array($this, "replaceAssetUrlInText_match"), $text);
+
+    	return($text);
+    }
+
+
+    /**
+     * callback for replacing one asset url inside text
+     */
+    private function replaceAssetUrlInText_match( $match ){
+
+    	$url = $match[0];
+
+    	if($this->isImportedAssetUrl($url) == false)
+    		return($url);
+
+    	return($this->toLocalAssetUrl($url));
+    }
+
+
 }
+
+class_alias( UELM_CreatorElementorWidget::class, 'UniteCreatorElementorWidget' );

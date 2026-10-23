@@ -21,6 +21,7 @@ class HelperProviderCoreUC_EL{
 	private static $arrTemplatesCounter = array();
 	private static $isInfiniteLoopCode = false;
 	private static $arrAddedStyles = array();
+	private static $isUploadMimeFiltersRegistered = false;
 	
 	private static $currentDocument = null;
 	private static $originalQueriedObject = null;
@@ -100,7 +101,7 @@ class HelperProviderCoreUC_EL{
 		if($fileExists == false)
 			return(false);
 
-		@unlink($filepath);
+		wp_delete_file($filepath);
 	}
 
 
@@ -191,8 +192,8 @@ class HelperProviderCoreUC_EL{
 		if(class_exists($className) == true)
 			return(false);
 
-		// class_alias('UniteCreatorElementorWidget', $className);
-		$code = "class {$className} extends UniteCreatorElementorWidget{}";
+		// class_alias('UELM_CreatorElementorWidget', $className);
+		$code = "class {$className} extends UELM_CreatorElementorWidget{}";
 		// phpcs:ignore Generic.PHP.ForbiddenFunctions.Found
 		eval($code);
 
@@ -616,11 +617,47 @@ class HelperProviderCoreUC_EL{
 	private static function ______ELEMENTOR_CONTENT________(){}
 	
 	/**
+	 * whether the current visitor may read this post.
+	 * published public posts stay available to logged-out visitors.
+	 * private, draft, and other non-public posts require read_post.
+	 */
+	public static function isPostReadable($postID){
+		
+		$postID = (int)$postID;
+		
+		if($postID <= 0)
+			return(false);
+		
+		$post = get_post($postID);
+		
+		if(empty($post))
+			return(false);
+		
+		if($post->post_type === "revision")
+			return(false);
+		
+		if(post_password_required($post))
+			return(false);
+		
+		// Unregistered types have no read_post mapping. WordPress falls back to edit_others_posts and emits a notice.
+		if(get_post_type_object($post->post_type) == null)
+			return(current_user_can("edit_others_posts"));
+		
+		if(is_post_publicly_viewable($post))
+			return(true);
+		
+		return(current_user_can("read_post", $post->ID));
+	}
+	
+	/**
 	 * get elementor data from post id
 	 */
 	public static function getElementorContentByPostID($postID){
 
 		$postID = (int)$postID;
+
+		if(self::isPostReadable($postID) == false)
+			return(false);
 
 		$strData = get_post_meta($postID,"_elementor_data",true);
 
@@ -742,7 +779,7 @@ class HelperProviderCoreUC_EL{
 		$arrElement = self::getArrElementFromContent($arrContent, $elementID);
 
 		if(empty($arrElement)){
-			UniteFunctionsUC::throwError("Elementor Widget with id: $elementID not found");
+			UniteFunctionsUC::throwError("Elementor Widget with id: " . esc_html($elementID) . " not found");
 		}
 
 		$type = UniteFunctionsUC::getVal($arrElement, "elType");
@@ -985,6 +1022,7 @@ class HelperProviderCoreUC_EL{
 			if(!empty($template))
 				$postType = $template->post_type;
 			
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 			$templateID = apply_filters( 'wpml_object_id', $templateID, $postType, true);
 		}
 
@@ -1045,6 +1083,9 @@ class HelperProviderCoreUC_EL{
 	public static function getElementorTemplate($templateID, $withCss = false){
 
 		if(empty($templateID) || is_numeric($templateID) == false)
+			return("");
+
+		if(self::isPostReadable($templateID) == false)
 			return("");
 
 		$output = \Elementor\Plugin::instance()->frontend->get_builder_content_for_display( $templateID, $withCss);
@@ -1138,6 +1179,7 @@ class HelperProviderCoreUC_EL{
 				$postType = $template->post_type;
 			
 			if(!empty($template))
+				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 				$templateID = apply_filters( 'wpml_object_id', $templateID, $postType, true);
 		}
 
@@ -1176,6 +1218,7 @@ class HelperProviderCoreUC_EL{
 		$isJetExists = UniteCreatorPluginIntegrations::isJetEngineExists();
 
 		if($isJetExists == true)
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 			do_action("the_post", $post, false);
 
 		//set the flag on dynamic ajax
@@ -1265,7 +1308,7 @@ class HelperProviderCoreUC_EL{
 
 		$htmlTemplate = str_replace($source, $dest, $htmlTemplate);
 
-		$htmlTemplate = do_shortcode($htmlTemplate);
+		$htmlTemplate = HelperProviderUC::processOutputShortcodes($htmlTemplate);
 
 		uelm_echo($htmlTemplate);
 
@@ -1298,7 +1341,7 @@ class HelperProviderCoreUC_EL{
 	 * put dynamic loop element style if exists
 	 */
 	public static function putDynamicLoopElementStyle($element){
-
+	
 		if(empty(GlobalsUnlimitedElements::$renderingDynamicData))
 			return(false);
 
@@ -1317,6 +1360,9 @@ class HelperProviderCoreUC_EL{
 
   		if(empty($dynamicSettings))
   			return(false);
+		
+		//allow all the controls to be used for dynamic loop
+		\Elementor\Core\Frontend\Performance::set_use_style_controls(true);
 
  		$arrControls = $element->get_controls();
   		if(empty($arrControls))
@@ -1356,7 +1402,6 @@ class HelperProviderCoreUC_EL{
   			return(false);
 
   		try{
-
 
   			$settings = @$element->parse_dynamic_settings( $dynamicSettings, $arrControls);
 
@@ -1505,6 +1550,9 @@ class HelperProviderCoreUC_EL{
 	 */
 	public static function savePostForDynamic($postID){
 		
+		if(self::isPostReadable($postID) == false)
+			UniteFunctionsUC::throwError("Post not found");
+		
 		$post = get_post($postID);
 		
 		if(empty($post))
@@ -1541,6 +1589,7 @@ class HelperProviderCoreUC_EL{
 		$isJetExists = UniteCreatorPluginIntegrations::isJetEngineExists();
 
 		if($isJetExists == true)
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 			do_action("the_post", $post, false);
 		
 		//set the flag on dynamic ajax
@@ -1597,6 +1646,105 @@ class HelperProviderCoreUC_EL{
 		
 	}
 	
+	/**
+	 * check if caching active
+	 */
+	public static function isElementorCachingActive(){
+				
+		if(isset(\Elementor\Plugin::$instance->experiments) == false)
+			return(false);
+		
+		$featureActive = \Elementor\Plugin::$instance->experiments->is_feature_active( 'e_element_cache' );
+		
+		if($featureActive == true)
+			return(true);
+		
+		$elementCacheTTL = get_option( 'elementor_element_cache_ttl', '' );
+		
+		if($elementCacheTTL === "disable" || empty($elementCacheTTL))
+			return(false);
+		
+		return(true);
+	}
+
+	/**
+	 * register upload mime filters based on settings
+	 */
+	public static function registerUploadMimeFilters(){
+		
+		if(self::$isUploadMimeFiltersRegistered === true)
+			return;
+		
+		self::$isUploadMimeFiltersRegistered = true;
+		
+		$allowedMimes = self::getAllowedUploadMimes();
+		if(empty($allowedMimes))
+			return;
+		
+		add_filter("upload_mimes", function($mimes) use ($allowedMimes){
+			return array_merge($mimes, $allowedMimes);
+		});
+		
+		add_filter("wp_check_filetype_and_ext", function($data, $file, $filename, $mimes) use ($allowedMimes){
+			
+			$extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+			
+			if(!isset($allowedMimes[$extension]))
+				return $data;
+			
+			// Honor the caller's allow-list. Do not force a type the caller did not ask for.
+			$allowed = wp_check_filetype($filename, $mimes);
+			if($allowed["ext"] === false || $allowed["type"] === false)
+				return $data;
+			
+			$data["ext"] = $extension;
+			$data["type"] = $allowedMimes[$extension];
+			
+			return $data;
+		}, 10, 4);
+	}
+	
+	/**
+	 * get allowed upload mime types from general settings
+	 */
+	private static function getAllowedUploadMimes(){
+		
+		$allowedMimes = array();
+		
+		$allowDocuments = self::getGeneralSetting("allow_upload_documents");
+		$allowDocuments = UniteFunctionsUC::strToBool($allowDocuments);
+		
+		$allowZip = self::getGeneralSetting("allow_upload_zip");
+		$allowZip = UniteFunctionsUC::strToBool($allowZip);
+		
+		$allowSvg = self::getGeneralSetting("allow_upload_svg");
+		$allowSvg = UniteFunctionsUC::strToBool($allowSvg);
+		
+		if($allowDocuments === true){
+			$allowedMimes = array_merge($allowedMimes, array(
+				"pdf" => "application/pdf",
+				"doc" => "application/msword",
+				"docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+				"ppt" => "application/vnd.ms-powerpoint",
+				"pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+				"xls" => "application/vnd.ms-excel",
+				"xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				"rtf" => "application/rtf",
+				"odt" => "application/vnd.oasis.opendocument.text",
+				"ods" => "application/vnd.oasis.opendocument.spreadsheet",
+				"odp" => "application/vnd.oasis.opendocument.presentation",
+			));
+		}
+		
+		if($allowZip === true)
+			$allowedMimes["zip"] = "application/zip";
+		
+		if($allowSvg === true)
+			$allowedMimes["svg"] = "image/svg+xml";
+		
+		return $allowedMimes;
+	}
+	
 	
 	/**
 	 * global init
@@ -1615,7 +1763,11 @@ class HelperProviderCoreUC_EL{
 		self::$urlCore = GlobalsUC::$urlPlugin.$pathRelative;
 				
 		self::$filepathGeneralSettings = self::$pathCore."settings/general_settings_el.xml";
+
+		self::registerUploadMimeFilters();
 		
+		do_action("uelm_after_global_init");
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 		do_action("ue_after_global_init");
 
 	}

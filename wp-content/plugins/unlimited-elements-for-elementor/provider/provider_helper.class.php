@@ -13,12 +13,12 @@ class HelperProviderUC{
 	 */
 	public static function isActivatedByFreemius(){
 
-		global $uefe_fs;
+		global $uelm_fs;
 
-		if(isset($uefe_fs) === false)
+		if(isset($uelm_fs) === false)
 			return (false);
 
-		$isActivated = $uefe_fs->is_paying();
+		$isActivated = $uelm_fs->is_paying();
 				
 		return ($isActivated);
 	}
@@ -28,12 +28,12 @@ class HelperProviderUC{
 	 */
 	public static function getFreemiusAccountUrl(){
 
-		global $uefe_fs;
+		global $uelm_fs;
 
-		if(isset($uefe_fs) === false)
+		if(isset($uelm_fs) === false)
 			return "";
 
-		$url = $uefe_fs->get_account_url();
+		$url = $uelm_fs->get_account_url();
 
 		return $url;
 	}
@@ -137,6 +137,53 @@ class HelperProviderUC{
 
 
 	/**
+	 * get meta select repeater default values
+	 */
+	public static function getMetaSelectDefaultValues(){
+
+		return(array());
+	}
+
+
+	/**
+	 * get meta select repeater fields
+	 */
+	public static function getMetaSelectRepeaterFields(){
+
+		$settings = new UniteCreatorSettings();
+
+		$params = array();
+		$params["origtype"] = UniteCreatorDialogParam::PARAM_TEXTFIELD;
+
+		$settings->addTextBox("title", "", __("Title", "unlimited-elements-for-elementor"), $params);
+
+		$params = array();
+		$params["origtype"] = UniteCreatorDialogParam::PARAM_TEXTFIELD;
+
+		$settings->addTextBox("meta_key", "", __("Meta Key", "unlimited-elements-for-elementor"), $params);
+
+		$params = array();
+		$params["origtype"] = UniteCreatorDialogParam::PARAM_DROPDOWN;
+		$params["description"] = __("LIKE is treated as contains. For IN, NOT IN, BETWEEN, NOT BETWEEN use comma separated values.", "unlimited-elements-for-elementor");
+
+		$arrCompare = self::getArrMetaCompareSelect();
+		$arrCompare = array_flip($arrCompare);
+
+		$settings->addSelect("compare", $arrCompare, __("Compare", "unlimited-elements-for-elementor"), "=", $params);
+
+		$params = array();
+		$params["origtype"] = UniteCreatorDialogParam::PARAM_TEXTFIELD;
+		$params["elementor_condition"] = array(
+			"compare" => array("=", "!=", ">", "<", ">=", "<=", "LIKE", "NOT LIKE", "IN", "NOT IN", "BETWEEN", "NOT BETWEEN"),
+		);
+
+		$settings->addTextBox("meta_value", "", __("Meta Value", "unlimited-elements-for-elementor"), $params);
+
+		return($settings);
+	}
+
+
+	/**
 	 * get data for meta compare select
 	 */
 	public static function getArrMetaCompareSelect(){
@@ -160,6 +207,70 @@ class HelperProviderUC{
 		$arrItems["NOT EXISTS"] = "NOT EXISTS";
 
 		return($arrItems);
+	}
+
+
+	/**
+	 * map meta_query compare operators to URL words
+	 */
+	public static function getArrMetaCompareUrlWords(){
+
+		$arrItems = array();
+		$arrItems["="] = "equals";
+		$arrItems["!="] = "notequals";
+		$arrItems[">"] = "greater";
+		$arrItems["<"] = "less";
+		$arrItems[">="] = "greaterequal";
+		$arrItems["<="] = "lessequal";
+		$arrItems["LIKE"] = "like";
+		$arrItems["NOT LIKE"] = "notlike";
+		$arrItems["IN"] = "in";
+		$arrItems["NOT IN"] = "notin";
+		$arrItems["BETWEEN"] = "between";
+		$arrItems["NOT BETWEEN"] = "notbetween";
+		$arrItems["EXISTS"] = "exists";
+		$arrItems["NOT EXISTS"] = "notexists";
+
+		return($arrItems);
+	}
+
+
+	/**
+	 * get URL word for a compare operator, empty for equals
+	 */
+	public static function getMetaCompareUrlWord($compare){
+
+		if(empty($compare) || $compare == "=")
+			return("");
+
+		$arrItems = self::getArrMetaCompareUrlWords();
+
+		return(UniteFunctionsUC::getVal($arrItems, $compare, ""));
+	}
+
+
+	/**
+	 * get compare operator from URL word, null if not a known word
+	 */
+	public static function getMetaCompareFromUrlWord($word){
+
+		if(is_string($word) == false)
+			return(null);
+
+		$word = strtolower(trim($word));
+
+		if($word === "")
+			return(null);
+
+		$arrItems = self::getArrMetaCompareUrlWords();
+
+		foreach($arrItems as $compare => $urlWord){
+
+			if(strtolower($urlWord) === $word)
+				return($compare);
+		}
+
+		return(null);
 	}
 
 
@@ -587,15 +698,20 @@ class HelperProviderUC{
 	
 	/**
 	 * get repeater items - from json
+	 *
+	 * @param mixed $httpContext Optional context for getUrlContents HTTP hooks (ue_http_pre_request / ue_http_response).
 	 */
-	public static function getRepeaterItems_json($arrValues, $name, $showDebugData = false, $showDebugContent = false){
+	public static function getRepeaterItems_json($arrValues, $name, $showDebugData = false, $showDebugContent = false, $httpContext = null){
+		
+		$showDebugData = ($showDebugData == true && HelperUC::canShowDebugOutput());
+		$showDebugContent = ($showDebugContent == true && HelperUC::canShowDebugOutput());
 		
 		$contentLocation = UniteFunctionsUC::getVal($arrValues, $name."_json_csv_location");
-
+		
 		if($contentLocation == "url"){
 
 			$url = UniteFunctionsUC::getVal($arrValues, $name."_json_csv_url");
-
+			
 			if(empty($url)){
 
 				if($showDebugData)
@@ -604,7 +720,7 @@ class HelperProviderUC{
 				return(null);
 			}
 			
-			$dynamicFieldValue = HelperUC::$operations->getUrlContents($url, $showDebugData);
+			$dynamicFieldValue = HelperUC::$operations->getUrlContents($url, $showDebugData, false, $httpContext);
 			
 		}else{
 			$dynamicFieldValue = UniteFunctionsUC::getVal($arrValues, $name."_json_csv_dynamic_field");
@@ -784,9 +900,9 @@ class HelperProviderUC{
 			
 		}
 		
-		
 		$isAcfExists = UniteCreatorAcfIntegrate::isAcfActive();
-
+		
+		
 		//-------------- repeater meta name ----------------
 
 		$params = array();
@@ -805,11 +921,11 @@ class HelperProviderUC{
 			$text = __("Meta Field Name", "unlimited-elements-for-elementor");
 		else
 			$text = __("ACF Field Name", "unlimited-elements-for-elementor");
-
+		
 		$objSettings->addTextBox($name."_repeater_name", "", $text, $params);
 
 		// --- fields location -----------
-
+		
 		$params = array();
 		$params["origtype"] = UniteCreatorDialogParam::PARAM_DROPDOWN;
 		
@@ -820,7 +936,7 @@ class HelperProviderUC{
 			$text = __("Meta Field Location", "unlimited-elements-for-elementor");
 		else
 			$text = __("ACF Field Location", "unlimited-elements-for-elementor");
-
+		
 		$arrLocations = array();
 		$arrLocations["current_post"] = __("Current Post", "unlimited-elements-for-elementor");
 		$arrLocations["parent_post"] = __("Parent Post", "unlimited-elements-for-elementor");
@@ -828,11 +944,16 @@ class HelperProviderUC{
 		$arrLocations["current_term"] = __("Current Term", "unlimited-elements-for-elementor");
 		$arrLocations["parent_term"] = __("Parent Term", "unlimited-elements-for-elementor");
 		$arrLocations["current_user"] = __("Current User", "unlimited-elements-for-elementor");
-
+		
+		if($isAcfExists == true){
+			$arrLocations["options_page"] = __("Options Page", "unlimited-elements-for-elementor");
+		}
+		
 		$arrLocations = array_flip($arrLocations);
 		
 		$objSettings->addSelect($name."_repeater_location", $arrLocations, $text, "current_post", $params);
-
+		
+		
 		// --- location post select -----------
 
 		if($isAcfExists == false)
@@ -849,11 +970,12 @@ class HelperProviderUC{
 
 		$objSettings->addPostIDSelect($name."_repeater_post", $text, $conditionRepeaterPost, "single");
 		
+			
+		// ----- ADD DEBUG OPTIONS
+		
 		if($addDebug == false)
 			return(false);
-
-		// ----- ADD DEBUG OPTIONS
-			
+		
 		$params = array();
 		$params["origtype"] = UniteCreatorDialogParam::PARAM_HR;
 			
@@ -941,6 +1063,7 @@ class HelperProviderUC{
 		$post = null;
 		$termID = null;
 		$userID = null;
+		$optionPagesData = null;
 		
 		
 		switch($location){
@@ -1048,9 +1171,17 @@ class HelperProviderUC{
 				}
 
 			break;
+			case "options_page":
+				
+				$objAcf = new UniteCreatorAcfIntegrate();
+				
+				$optionPagesData = $objAcf->getOptionsPagesData();
+				
+				
+			break;
 			default:
-				dmp("repeater location not found!");
-				dmp("repeater - get data from location: $location");
+				HelperHtmlUC::outputErrorMessage("repeater location not found!");
+				HelperHtmlUC::outputErrorMessage("repeater - get data from location: $location");
 			break;
 		}
 		
@@ -1060,8 +1191,9 @@ class HelperProviderUC{
 		//---- load from post
 
 		if(!empty($postID)){
-
+						
 			$arrCustomFields = UniteFunctionsWPUC::getPostCustomFields($postID, false);
+			
 		}
 		
 		//------ load from term
@@ -1073,9 +1205,12 @@ class HelperProviderUC{
 
 		if(!empty($userID))
 			$arrCustomFields = UniteFunctionsWPUC::getUserCustomFields($userID, false);
-					
-		
+
+		//------ load from option page data
 			
+		if(!empty($optionPagesData))
+			$arrCustomFields = $optionPagesData;
+		
 		//show debug meta text
 
 		if($showDebugMeta == true){
@@ -1100,6 +1235,14 @@ class HelperProviderUC{
 
 				HelperUC::$operations->putCustomFieldsArrayDebug($arrCustomFields, $text);
 			}
+			
+			if(!empty($optionPagesData)){
+
+				$text = "Options page data";
+				
+				HelperUC::$operations->putCustomFieldsArrayDebug($arrCustomFields, $text);
+			}
+			
 
 
 			if(empty($repeaterName)){
@@ -1125,6 +1268,18 @@ class HelperProviderUC{
 
 		$arrRepeaterItems = UniteFunctionsUC::getVal($arrCustomFields, $repeaterName);
 		
+		if(is_string($arrRepeaterItems)){
+
+			$arrNativeUserKeys = UniteFunctionsWPUC::getUserMetaKeys();
+
+			// Native profile fields (biography etc.) are user-editable strings, never repeater arrays.
+			if(!empty($userID) && in_array($repeaterName, $arrNativeUserKeys, true) == true)
+				$arrRepeaterItems = array();
+			else
+				$arrRepeaterItems = UniteFunctionsUC::maybeUnserialize($arrRepeaterItems);
+		}
+
+	
 		//show debug data text
 
 		if($showDebugData == true){
@@ -1233,6 +1388,11 @@ class HelperProviderUC{
 			$paramDefault = isset($field["default"]) ? $field["default"] : "";
 			
 			switch($field["type"]){
+				case UniteCreatorDialogParam::PARAM_HR:
+					
+					$settingsManager->addHr($paramName, $params);
+					
+				break;
 				case UniteCreatorDialogParam::PARAM_STATIC_TEXT:
 					$settingsManager->addStaticText($field["text"], $paramName, $params);
 				break;
@@ -1244,6 +1404,11 @@ class HelperProviderUC{
 					
 					$params["add_dynamic"] = true;
 					
+					$settingsManager->addTextBox($paramName, $paramDefault, $field["text"], $params);
+				break;
+				case UniteCreatorDialogParam::PARAM_NUMBER:
+					$params["origtype"] = UniteCreatorDialogParam::PARAM_NUMBER;
+					$params["add_dynamic"] = true;
 					$settingsManager->addTextBox($paramName, $paramDefault, $field["text"], $params);
 				break;
 				case UniteCreatorDialogParam::PARAM_DROPDOWN:
@@ -1322,7 +1487,7 @@ class HelperProviderUC{
 		$arrDebug = HelperUC::getDebug();
 
 		if(!empty($arrDebug))
-			$message .= "<br>\nDebug: \n".print_r($arrDebug, true);
+			$message .= "<br>\nDebug: \n".uelm_html_debug($arrDebug);
 		else
 			$message .= "<br>\n no other debug provided";
 
@@ -1364,6 +1529,10 @@ class HelperProviderUC{
 		
 		add_action("plugins_loaded", array("HelperProviderUC", "onPluginsLoaded"));
 		add_action("init", array("HelperProviderUC", "onInitTrigger"));
+		
+		add_action("wp_footer", array("HelperProviderUC", "showPostMetaDebugFromQuery"));
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
+		add_action("admin_footer", array("HelperProviderUC", "showPostMetaDebugFromQuery"));
 				
 		//add_action("wp_loaded", array("HelperProviderUC", "onWPLoaded"));
 	}
@@ -1373,6 +1542,8 @@ class HelperProviderUC{
 	 */
 	public static function onPluginsLoadedCallPlugins(){
 
+		do_action("uelm_addon_library_register_plugins");
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 		do_action("addon_library_register_plugins");
 
 		UniteProviderFunctionsUC::doAction(UniteCreatorFilters::ACTION_EDIT_GLOBALS);
@@ -1477,7 +1648,7 @@ class HelperProviderUC{
 					if($isSaparateScripts == false){		//one script tag
 
 						echo "<script type='text/javascript' id='unlimited-elements-scripts'>\n";
-
+		
 							foreach ($arrScriptsOutput as $script){
 								uelm_echo($script."\n");
 							}
@@ -1588,18 +1759,69 @@ class HelperProviderUC{
 
 	/**
 	 * check if user has some operations permissions
+	 * return true/false
 	 */
 	public static function isUserHasOperationsPermissions(){
-
+		
 		$permission = HelperProviderCoreUC_EL::getGeneralSetting("edit_permission");
-
+		
 		$capability = "manage_options";
 		if($permission == "editor")
 			$capability = "edit_pages";
 		
 		$isUserHasPermission = current_user_can($capability);
-
+		
+		if($isUserHasPermission == false)
+			return(false);
+		
+		//check by specific roles
+				
+		$user = wp_get_current_user();
+		if (!$user || empty($user->roles))
+			return false;		
+		
+		$roles = (array) $user->roles;
+			if (in_array('contributor', $roles, true) || in_array('author', $roles, true))
+				return false;		
+			
 		return($isUserHasPermission);
+	}
+
+	/**
+	 * editor / get_addon_output_data preview — not the live frontend
+	 */
+	public static function isWidgetOutputPreview(){
+		
+		if(GlobalsProviderUC::$isInsideEditor == true)
+			return(true);
+
+		if(GlobalsUC::$ajaxAction == "get_addon_output_data")
+			return(true);
+
+		return(false);
+	}
+
+	/**
+	 * live output always runs shortcodes.
+	 * preview / editor output only for plugin operators (not Contributor/Author).
+	 */
+	public static function canProcessOutputShortcodes(){
+
+		if(self::isWidgetOutputPreview() == true && self::isUserHasOperationsPermissions() == false)
+			return(false);
+
+		return(true);
+	}
+
+	/**
+	 * process shortcodes on rendered widget html
+	 */
+	public static function processOutputShortcodes($html){
+
+		if(self::canProcessOutputShortcodes() == false)
+			return($html);
+
+		return do_shortcode($html);
 	}
 
 	/**
@@ -1946,6 +2168,22 @@ class HelperProviderUC{
 	}
 	
 	/**
+	 * show post debug by id
+	 */
+	public static function showPostDebug($postID){
+		
+		$post = get_post($postID);
+		
+		if(empty($post))
+			dmp("post not found: $postID");
+		
+		$arrPosts = array($post);
+		
+		HelperUC::$operations->putPostsFullDebug($arrPosts);
+		
+	}
+	
+	/**
 	 * show current user meta data for debug
 	 */
 	public static function showCurrentUserMetaDataDebug(){
@@ -1971,11 +2209,147 @@ class HelperProviderUC{
 	}
 	
 	/**
+	 * resolve the post for ucpostmetadebug on admin edit screens
+	 */
+	private static function getPostMetaDebugPost(){
+		
+		$postID = UniteFunctionsUC::getGetVar("post", "", UniteFunctionsUC::SANITIZE_ID);
+		
+		if(empty($postID))
+			$postID = UniteFunctionsUC::getGetVar("post_ID", "", UniteFunctionsUC::SANITIZE_ID);
+		
+		if(empty($postID))
+			return(null);
+		
+		$post = get_post($postID);
+		
+		if(!empty($post))
+			return($post);
+		
+		return(null);
+	}
+	
+	/**
+	 * show post meta debug from ?ucpostmetadebug=true on front and admin
+	 */
+	public static function showPostMetaDebugFromQuery(){
+		
+		$showMetaFields = HelperUC::hasPermissionsFromQuery("ucpostmetadebug");
+		
+		if($showMetaFields == false)
+			return(false);
+		
+		if(is_admin() == true){
+			$post = self::getPostMetaDebugPost();
+			
+			if(empty($post))
+				return(false);
+			
+			self::putPostMetaDebugOutput($post);
+			
+			return(true);
+		}
+		
+		if(is_singular() == true){
+			$post = get_post();
+			
+			if(!empty($post)){
+				self::putPostMetaDebugOutput($post);
+				
+				return(true);
+			}
+		}
+		
+		self::showLastQuery();
+		
+		return(true);
+	}
+	
+	/**
+	 * true when the admin editor covers footer output
+	 */
+	private static function isPostMetaDebugAdminOverlay(){
+		
+		if(is_admin() == false)
+			return(false);
+		
+		$action = UniteFunctionsUC::getGetVar("action", "", UniteFunctionsUC::SANITIZE_KEY);
+		
+		if($action == "elementor")
+			return(true);
+		
+		if(function_exists("get_current_screen")){
+			$screen = get_current_screen();
+			
+			if(!empty($screen) && !empty($screen->is_block_editor))
+				return(true);
+		}
+		
+		return(false);
+	}
+	
+	/**
+	 * print the same post debug dump on front and admin
+	 */
+	private static function putPostMetaDebugOutput($post){
+		
+		$wrapperClass = "uc-postmetadebug";
+		$isAdmin = is_admin();
+		$isOverlay = self::isPostMetaDebugAdminOverlay();
+		
+		if($isAdmin == true)
+			$wrapperClass .= " uc-postmetadebug-admin";
+		
+		if($isOverlay == true)
+			$wrapperClass .= " uc-postmetadebug-overlay";
+		
+		uelm_echo('<div class="'.esc_attr($wrapperClass).'" style="clear:both;background:#fff;color:#000;text-align:left;direction:ltr;">');
+		
+		if($isAdmin == true){
+			uelm_echo('<style>
+				.uc-postmetadebug-admin{box-sizing:border-box;padding:52px 20px 20px 180px !important;}
+				html.wp-toolbar.folded .uc-postmetadebug-admin{padding-left:56px !important;}
+				.uc-postmetadebug-overlay{position:fixed;z-index:100000;left:160px !important;right:0;bottom:0;max-height:45vh;overflow:auto;padding:20px !important;}
+				html.wp-toolbar.folded .uc-postmetadebug-overlay{left:36px !important;padding:20px !important;}
+				@media screen and (max-width:782px){
+					.uc-postmetadebug-admin,.uc-postmetadebug-overlay{left:0 !important;padding:52px 20px 20px 20px !important;}
+				}
+			</style>');
+		}
+		
+		self::showCurrentPostObjectDebug($post);
+		self::showCurrentPostMetaDebug($post);
+		self::showCurrentPostTermsDebug($post);
+		self::showElementorDataDebug($post);
+		
+		uelm_echo('</div>');
+	}
+	
+	/**
+	 * show post object debug
+	 */
+	public static function showCurrentPostObjectDebug($post = null){
+		
+		if(empty($post))
+			$post = get_post();
+		
+		if(empty($post))
+			return(false);
+		
+		HelperUC::$operations->putPostObjectDebug($post);
+		
+	}
+	
+	/**
 	 * show current post meta debug
 	 */
-	public static function showCurrentPostMetaDebug(){
+	public static function showCurrentPostMetaDebug($post = null){
 		
-		$post = get_post();
+		if(empty($post))
+			$post = get_post();
+		
+		if(empty($post))
+			return(false);
 		
 		HelperUC::$operations->putPostCustomFieldsDebug($post->ID);
 				
@@ -1984,9 +2358,13 @@ class HelperProviderUC{
 	/**
 	 * show current post meta debug
 	 */
-	public static function showCurrentPostTermsDebug(){
+	public static function showCurrentPostTermsDebug($post = null){
 		
-		$post = get_post();
+		if(empty($post))
+			$post = get_post();
+		
+		if(empty($post))
+			return(false);
 		
 		$arrTermsTitles = UniteFunctionsWPUC::getPostTermsTitles($post, true);
 		
@@ -1994,6 +2372,55 @@ class HelperProviderUC{
 		
 		dmp("Post Terms for post <b>$postTitle</b>: ");
 		dmp($arrTermsTitles);
+		
+	}
+	
+	/**
+	 * show current post Elementor data debug (decoded _elementor_data via core helper)
+	 */
+	public static function showElementorDataDebug($post = null){
+		
+		if(empty($post))
+			$post = get_post();
+		
+		if(empty($post))
+			return(false);
+		
+		$postTitle = $post->post_title;
+		$postID = $post->ID;
+		
+		$arrData = HelperProviderCoreUC_EL::getElementorContentByPostID($postID);
+		
+		if(empty($arrData)){
+			return(false);
+		}
+		
+		dmp("Elementor data (_elementor_data) for post: <b>$postTitle</b>, post id: $postID");
+		
+		$arrForShow = UniteFunctionsUC::modifyDataArrayForShow($arrData);
+		
+		dmp($arrForShow);
+		
+		return(true);
+	}
+	
+	/**
+	 * show current post meta debug
+	 */
+	public static function showLastQuery(){
+		
+		global $wp_query;
+		$queryVars = $wp_query->query;
+		
+		dmp("Last Posts Query:");
+		dmpHtml($queryVars);
+		
+		//dmp("is main query: ".$wp_query->isMain());
+		
+		dmp("The Request: ");
+		
+		dmpHtml($wp_query->request);
+		
 		
 	}
 	

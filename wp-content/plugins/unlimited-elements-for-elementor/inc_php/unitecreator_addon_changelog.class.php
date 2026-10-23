@@ -16,14 +16,16 @@ class UniteCreatorAddonChangelog{
 	const TYPE_FEATURE = "feature";
 	const TYPE_FIX = "fix";
 	const TYPE_OTHER = "other";
-
+	const TYPE_REQUEST = "request";
+	const MAX_REQUEST_ROTATION = 100;
+	
 	/**
 	 * Get the table name.
 	 *
 	 * @return string
 	 */
 	public function getTable(){
-
+		
 		$table = UniteFunctionsWPUC::prefixDBTable(GlobalsUC::TABLE_CHANGELOG_NAME);
 
 		return $table;
@@ -110,22 +112,35 @@ class UniteCreatorAddonChangelog{
 
 		global $wpdb;
 
-		$sql = "
-			SELECT *
-			FROM {$this->getTable()}
-			WHERE addon_id = %d
-			ORDER BY created_at DESC
-		";
-
+		$table = esc_sql($this->getTable());
 		$limit = UniteFunctionsUC::getVal($filters, "limit", null);
 
 		if($limit !== null){
-			$sql .= " LIMIT " . intval($limit);
+			$sql = "
+				SELECT *
+				FROM {$table}
+				WHERE addon_id = %d
+				AND type != %s
+				ORDER BY created_at DESC
+				LIMIT %d
+			";
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Query is prepared on this line. Table name is escaped with esc_sql(). The SQL text is in $sql because it includes that table name.
+			$sql = $wpdb->prepare($sql, array($addonId, self::TYPE_REQUEST, intval($limit)));
+		}else{
+			$sql = "
+				SELECT *
+				FROM {$table}
+				WHERE addon_id = %d
+				AND type != %s
+				ORDER BY created_at DESC
+			";
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Query is prepared on this line. Table name is escaped with esc_sql(). The SQL text is in $sql because it includes that table name.
+			$sql = $wpdb->prepare($sql, array($addonId, self::TYPE_REQUEST));
 		}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$sql = $wpdb->prepare($sql, array($addonId));
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom changelog table. WordPress has no API for it.
 		$results = $wpdb->get_results($sql, ARRAY_A);
 		$changelogs = $this->prepareChangelogs($results);
 
@@ -144,21 +159,24 @@ class UniteCreatorAddonChangelog{
 		global $wpdb;
 
 		$ids = is_array($id) ? $id : array($id);
-		$idPlaceholders = UniteFunctionsWPUC::getDBPlaceholders($ids, "%d");
+		$ids = array_map("intval", $ids);
 
 		if(empty($ids) === true)
 			return array();
 
+		$table = esc_sql($this->getTable());
+		$idPlaceholders = implode(",", array_fill(0, count($ids), "%d"));
+
 		$sql = "
 			SELECT *
-			FROM {$this->getTable()}
+			FROM {$table}
 			WHERE id IN($idPlaceholders)
 			ORDER BY created_at DESC
 		";
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Query is prepared on this line. Table name is escaped with esc_sql(). The SQL text is in $sql because it includes that table name. Placeholders are %d only.
 		$sql = $wpdb->prepare($sql, $ids);
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom changelog table. WordPress has no API for it.
 		$results = $wpdb->get_results($sql, ARRAY_A);
 		$items = $this->prepareChangelogs($results);
 
@@ -194,6 +212,7 @@ class UniteCreatorAddonChangelog{
 			"created_at" => current_time("mysql"),
 		);
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom changelog table. WordPress has no API for it.
 		$result = $wpdb->insert($this->getTable(), $data);
 
 		return $result;
@@ -220,6 +239,7 @@ class UniteCreatorAddonChangelog{
 
 			foreach($ids as $id){
 				$where = array("id" => $id);
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom changelog table. WordPress has no API for it.
 				$result += $wpdb->update($table, $data, $where);
 			}
 
@@ -249,6 +269,7 @@ class UniteCreatorAddonChangelog{
 
 			foreach($ids as $id){
 				$where = array("id" => $id);
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom changelog table. WordPress has no API for it.
 				$result += $wpdb->delete($table, $where);
 			}
 
@@ -273,6 +294,7 @@ class UniteCreatorAddonChangelog{
 			self::TYPE_FEATURE => __("Feature", "unlimited-elements-for-elementor"),
 			self::TYPE_FIX => __("Fix", "unlimited-elements-for-elementor"),
 			self::TYPE_OTHER => __("Other", "unlimited-elements-for-elementor"),
+			self::TYPE_REQUEST => __("Request", "unlimited-elements-for-elementor"),
 		);
 
 		return UniteFunctionsUC::getVal($titles, $type, $type);
@@ -307,6 +329,110 @@ class UniteCreatorAddonChangelog{
 		}
 
 		return $changelogs;
+	}
+
+	/**
+	 * Save a request to the changelog.
+	 * Stores request URL and request time.
+	 * Maintains only the last MAX_REQUEST_ROTATION requests with rotation (FIFO).
+	 *
+	 * @param string $url
+	 * @param string|null $requestTime
+	 *
+	 * @return int|false
+	 */
+	public function saveRequest($url, $requestTime = null){
+
+		global $wpdb;
+
+		if($requestTime === null)
+			$requestTime = current_time("mysql");
+
+		$data = array(
+			"addon_id" => 0,
+			"addon_title" => "",
+			"user_id" => get_current_user_id(),
+			"type" => self::TYPE_REQUEST,
+			"text" => $url,
+			"plugin_version" => UNLIMITED_ELEMENTS_VERSION,
+			"created_at" => $requestTime,
+		);
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom changelog table. WordPress has no API for it.
+		$result = $wpdb->insert($this->getTable(), $data);
+
+		// Maintain only the last 100 requests (FIFO rotation)
+		if($result !== false){
+			$this->rotateRequests(self::MAX_REQUEST_ROTATION);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Rotate requests to maintain only the specified number of requests.
+	 * Deletes the oldest requests if the count exceeds the limit.
+	 *
+	 * @param int $maxCount
+	 *
+	 * @return int Number of deleted records
+	 */
+	private function rotateRequests($maxCount){
+
+		global $wpdb;
+
+		$table = esc_sql($this->getTable());
+
+		// Count total requests
+		$sql = "
+			SELECT COUNT(*) as total
+			FROM {$table}
+			WHERE type = %s
+		";
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Query is prepared on this line. Table name is escaped with esc_sql(). The SQL text is in $sql because it includes that table name.
+		$sql = $wpdb->prepare($sql, array(self::TYPE_REQUEST));
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom changelog table. WordPress has no API for it.
+		$result = $wpdb->get_var($sql);
+		$total = intval($result);
+
+		if($total <= $maxCount)
+			return 0;
+
+		// Calculate how many to delete
+		$toDelete = $total - $maxCount;
+
+		// Get IDs of oldest requests to delete
+		$sql = "
+			SELECT id
+			FROM {$table}
+			WHERE type = %s
+			ORDER BY created_at ASC
+			LIMIT %d
+		";
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Query is prepared on this line. Table name is escaped with esc_sql(). The SQL text is in $sql because it includes that table name.
+		$sql = $wpdb->prepare($sql, array(self::TYPE_REQUEST, $toDelete));
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom changelog table. WordPress has no API for it.
+		$ids = $wpdb->get_col($sql);
+
+		if(empty($ids) === true)
+			return 0;
+
+		// Delete the oldest requests
+		$ids = array_map("intval", $ids);
+		$idPlaceholders = implode(",", array_fill(0, count($ids), "%d"));
+		$sql = "
+			DELETE FROM {$table}
+			WHERE id IN($idPlaceholders)
+		";
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Query is prepared on this line. Table name is escaped with esc_sql(). The SQL text is in $sql because it includes that table name. Placeholders are %d only.
+		$sql = $wpdb->prepare($sql, $ids);
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom changelog table. WordPress has no API for it.
+		$wpdb->query($sql);
+
+		return $toDelete;
 	}
 
 }

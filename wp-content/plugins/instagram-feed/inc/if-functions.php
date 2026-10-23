@@ -195,6 +195,89 @@ function sbi_add_resized_image_data($instagram_feed, $feed_id)
 add_action('sbi_before_feed_end', 'sbi_add_resized_image_data', 10, 2);
 
 /**
+ * Creates the locator token baked into logged-out feed HTML (data-locatornonce).
+ *
+ * An HMAC over the same action string the old WordPress nonce used, so it still
+ * binds a request's atts (via the transient name) to a feed the site actually
+ * rendered, but it never expires, so full-page-cached HTML keeps working
+ * (SMASH-1630, AgDR-9002). Only minted for logged-out renders, which are what
+ * page caches serve; logged-in renders keep the user-bound, expiring nonce.
+ *
+ * @param int|string $post_id        ID of the post the feed was rendered on, or 'unknown'.
+ * @param string     $transient_name Transient name of the rendered feed.
+ *
+ * @return string
+ */
+function sbi_create_locator_token($post_id, $transient_name)
+{
+	$action = 'sbi-locator-nonce-' . $post_id . '-' . $transient_name;
+
+	return hash_hmac('sha256', 'sbi-locator-token|' . $action, sbi_get_locator_token_key());
+}
+
+/**
+ * Returns the plugin-scoped key the locator token HMAC is signed with.
+ *
+ * The key is a subkey derived from core's nonce salt: NONCE_KEY and NONCE_SALT
+ * in the default wp-config.php, or, on installs without them, core's own
+ * nonce_key / nonce_salt options, which core already creates the first time
+ * any nonce is made. The plugin therefore triggers no write anywhere, so there
+ * is no first-render race. The derived subkey plus the 'sbi-locator-token|'
+ * message prefix keep these tokens distinct from core nonces, which use a
+ * different construction and algorithm.
+ *
+ * To revoke every issued token, set sbi_locator_token_epoch to a NEW value
+ * (e.g. `wp option update sbi_locator_token_epoch <random>`) or rotate the
+ * wp-config.php salts. Deleting the option reverts to the default epoch and so
+ * re-validates tokens minted before the first change; do not revoke by
+ * deleting it. Any scalar epoch is used as a string (an integer set via
+ * update_option() still revokes).
+ *
+ * @return string
+ */
+function sbi_get_locator_token_key()
+{
+	static $key = null;
+
+	if (null !== $key) {
+		return $key;
+	}
+
+	$epoch = get_option('sbi_locator_token_epoch', '');
+	$epoch = is_scalar($epoch) ? (string) $epoch : '';
+
+	$key = hash_hmac('sha256', 'sbi-locator-key|' . $epoch, wp_salt('nonce'));
+
+	return $key;
+}
+
+/**
+ * Verifies a locator token submitted with a feed AJAX request.
+ *
+ * Accepts the non-expiring HMAC token, and falls back to a WordPress nonce for
+ * HTML that was cached before the token replaced it.
+ *
+ * @param mixed      $token          Submitted token.
+ * @param int|string $post_id        ID of the post the feed was rendered on, or 'unknown'.
+ * @param string     $transient_name Transient name of the requested feed.
+ *
+ * @return bool
+ */
+function sbi_verify_locator_token($token, $post_id, $transient_name)
+{
+	if (!is_string($token) || '' === $token) {
+		return false;
+	}
+
+	if (hash_equals(sbi_create_locator_token($post_id, $transient_name), $token)) {
+		return true;
+	}
+
+	// Legacy: HTML cached before this change still carries a WordPress nonce.
+	return false !== wp_verify_nonce($token, 'sbi-locator-nonce-' . $post_id . '-' . $transient_name);
+}
+
+/**
  * Called after the load more button is clicked using admin-ajax.php.
  * Resembles "display_instagram"
  */
@@ -218,7 +301,7 @@ function sbi_get_next_post_set()
 	$transient_name = $instagram_feed_settings->get_transient_name();
 
 	$nonce = isset($_POST['locator_nonce']) ? sanitize_text_field(wp_unslash($_POST['locator_nonce'])) : '';
-	if (!wp_verify_nonce($nonce, 'sbi-locator-nonce-' . $post_id . '-' . $transient_name) || $transient_name !== $feed_id) {
+	if (!sbi_verify_locator_token($nonce, $post_id, $transient_name) || $transient_name !== $feed_id) {
 		wp_send_json_error('nonce check failed, details do not match');
 	}
 
@@ -361,7 +444,7 @@ function sbi_process_submitted_resize_ids()
 	$settings = $instagram_feed_settings->get_settings();
 
 	$nonce = isset($_POST['locator_nonce']) ? sanitize_text_field(wp_unslash($_POST['locator_nonce'])) : '';
-	if (!wp_verify_nonce($nonce, 'sbi-locator-nonce-' . $post_id . '-' . $transient_name) || $transient_name !== $feed_id) {
+	if (!sbi_verify_locator_token($nonce, $post_id, $transient_name) || $transient_name !== $feed_id) {
 		wp_send_json_error('nonce check failed, details do not match');
 	}
 
@@ -421,7 +504,7 @@ function sbi_do_locator()
 	$transient_name = $instagram_feed_settings->get_transient_name();
 
 	$nonce = isset($_POST['locator_nonce']) ? sanitize_text_field(wp_unslash($_POST['locator_nonce'])) : '';
-	if (!wp_verify_nonce($nonce, 'sbi-locator-nonce-' . $post_id . '-' . $transient_name)) {
+	if (!sbi_verify_locator_token($nonce, $post_id, $transient_name)) {
 		wp_send_json_error('nonce check failed');
 	}
 
@@ -1024,7 +1107,7 @@ function sbi_is_url($input)
 
 
 /**
- * Added to workaround MySQL tables that don't use utf8mb4 character sets
+ * Added to work around MySQL tables that don't use utf8mb4 character sets
  *
  * @since 2.2.1/5.3.1
  */
@@ -1037,7 +1120,7 @@ function sbi_sanitize_emoji($string)
 }
 
 /**
- * Added to workaround MySQL tables that don't use utf8mb4 character sets
+ * Added to work around MySQL tables that don't use utf8mb4 character sets
  *
  * @since 2.2.1/5.3.1
  */
@@ -1168,6 +1251,35 @@ function sbi_clear_caches()
 }
 
 /**
+ * Full sitewide cache clear — mirrors the "Clear All Caches" admin button.
+ */
+function sbi_clear_all_feed_caches()
+{
+	global $wpdb;
+
+	$cache_table_name = $wpdb->prefix . 'sbi_feed_caches';
+	$wpdb->query(
+		"UPDATE $cache_table_name
+		 SET cache_value = ''
+		 WHERE cache_key NOT IN ( 'posts_backup', 'header_backup' );"
+	);
+
+	$options_table = $wpdb->prefix . 'options';
+	$wpdb->query("DELETE FROM $options_table WHERE `option_name` LIKE ('%\_transient\_sbi\_%')");
+	$wpdb->query("DELETE FROM $options_table WHERE `option_name` LIKE ('%\_transient\_timeout\_sbi\_%')");
+	$wpdb->query("DELETE FROM $options_table WHERE `option_name` LIKE ('%\_transient\_&sbi\_%')");
+	$wpdb->query("DELETE FROM $options_table WHERE `option_name` LIKE ('%\_transient\_timeout\_&sbi\_%')");
+	$wpdb->query("DELETE FROM $options_table WHERE `option_name` LIKE ('%\_transient\_\$sbi\_%')");
+	$wpdb->query("DELETE FROM $options_table WHERE `option_name` LIKE ('%\_transient\_timeout\_\$sbi\_%')");
+
+	SB_Instagram_Cache::clear_legacy(true);
+
+	sb_instagram_clear_page_caches();
+
+	do_action('sbi_after_clear_all_feed_caches');
+}
+
+/**
  * When certain events occur, page caches need to
  * clear or errors occur or changes will not be seen
  */
@@ -1210,6 +1322,32 @@ function sb_instagram_clear_page_caches()
 }
 
 /**
+ * Registers the local design-tokens stylesheet so consumer styles can
+ * declare it as a dependency. Hooked at priority 1 on both the frontend
+ * and admin enqueue actions, and also called directly by
+ * sb_instagram_scripts_enqueue() — those two hooks alone do not cover
+ * every pass that registers consumer styles (notably the block editor's
+ * iframed canvas asset list and REST editor-settings requests), so the
+ * handle must also be registered where it is consumed.
+ *
+ * The file is a snapshot of @smashballoons/tokens (npm) — see
+ * assets/tokens/sb-tokens-local.css for the version pin and migration
+ * notes.
+ */
+function sb_instagram_register_tokens_local_style()
+{
+	wp_register_style(
+		'sbi-tokens-local',
+		SBI_PLUGIN_URL . 'assets/tokens/sb-tokens-local.css',
+		array(),
+		SBIVER
+	);
+}
+
+add_action('wp_enqueue_scripts', 'sb_instagram_register_tokens_local_style', 1);
+add_action('admin_enqueue_scripts', 'sb_instagram_register_tokens_local_style', 1);
+
+/**
  * Makes the JavaScript file available and enqueues the stylesheet
  * for the plugin
  */
@@ -1236,10 +1374,18 @@ function sb_instagram_scripts_enqueue($enqueue = false)
 		wp_register_script('sbi_scripts', trailingslashit(SBI_PLUGIN_URL) . $js_file, array('jquery'), SBIVER, true);
 	}
 
+	// The design-tokens handle is a hard dependency of sbi_styles below, so it
+	// must be registered here rather than relying solely on the priority 1
+	// enqueue hooks: the block editor builds its iframed canvas asset list (and
+	// serves REST editor-settings requests) before/without admin_enqueue_scripts,
+	// and an unregistered dependency makes WP_Dependencies silently drop
+	// sbi_styles. wp_register_style() is idempotent, so the hooks stay harmless.
+	sb_instagram_register_tokens_local_style();
+
 	if (isset($sb_instagram_settings['enqueue_css_in_shortcode']) && $sb_instagram_settings['enqueue_css_in_shortcode']) {
-		wp_register_style('sbi_styles', trailingslashit(SBI_PLUGIN_URL) . $css_file, array(), SBIVER);
+		wp_register_style('sbi_styles', trailingslashit(SBI_PLUGIN_URL) . $css_file, array('sbi-tokens-local'), SBIVER);
 	} else {
-		wp_enqueue_style('sbi_styles', trailingslashit(SBI_PLUGIN_URL) . $css_file, array(), SBIVER);
+		wp_enqueue_style('sbi_styles', trailingslashit(SBI_PLUGIN_URL) . $css_file, array('sbi-tokens-local'), SBIVER);
 	}
 
 
@@ -1566,7 +1712,17 @@ function sbi_schedule_report_email()
 	wp_schedule_event($six_am_local, 'sbiweekly', 'sb_instagram_feed_issue_email');
 }
 
-function sbi_send_report_email()
+/**
+ * Build and send the feed issue report email.
+ *
+ * @param array $staleness Optional BackupCacheMonitor::evaluate() state. When
+ *                         its tier is non-zero the report describes stale
+ *                         backup content instead of a connection error; pass
+ *                         nothing to keep the original critical-error copy.
+ *
+ * @return bool
+ */
+function sbi_send_report_email($staleness = array())
 {
 	$options = get_option('sb_instagram_settings');
 
@@ -1610,7 +1766,24 @@ function sbi_send_report_email()
 		}
 	}
 
-	if (!$is_expiration_notice) {
+	// Staleness never overrides the reauthentication notice: an expiring
+	// private account is the more specific, more actionable problem.
+	$is_staleness_notice = !$is_expiration_notice && !empty($staleness['tier']);
+
+	if ($is_staleness_notice) {
+		$stale_days = isset($staleness['worst_days']) ? (int)$staleness['worst_days'] : 0;
+		$stale_feeds = isset($staleness['feed_count']) ? (int)$staleness['feed_count'] : 0;
+
+		$title = sprintf(__('Instagram Feed Report for %s', 'instagram-feed'), str_replace(array('http://', 'https://'), '', home_url()));
+		$bold = __('An Instagram Feed on Your Website is Showing Old Posts', 'instagram-feed');
+		$details = '<p>' . sprintf(__('An Instagram feed on your website has not been able to get new posts from Instagram for %d days, so visitors are seeing an old saved copy of your feed. Your website looks normal, which makes this easy to miss, but new Instagram posts will not appear until the connection is fixed.', 'instagram-feed'), $stale_days) . '</p>';
+
+		if ($stale_feeds > 1) {
+			$details .= '<p>' . sprintf(__('%d feeds on this site are affected.', 'instagram-feed'), $stale_feeds) . '</p>';
+		}
+
+		$details .= '<p>' . sprintf(__('To check the connection and get it working again, please visit the %sInstagram Feed settings page%s on your website.', 'instagram-feed'), '<a href="' . esc_url($link) . '">', '</a>') . '</p>';
+	} elseif (!$is_expiration_notice) {
 		$title = sprintf(__('Instagram Feed Report for %s', 'instagram-feed'), str_replace(array('http://', 'https://'), '', home_url()));
 		$bold = __('There\'s an Issue with an Instagram Feed on Your Website', 'instagram-feed');
 		$details = '<p>' . __('An Instagram feed on your website is currently unable to connect to Instagram to retrieve new posts. Don\'t worry, your feed is still being displayed using a cached version, but is no longer able to display new posts.', 'instagram-feed') . '</p>';
@@ -1618,7 +1791,7 @@ function sbi_send_report_email()
 	} else {
 		$title = __('Your Private Instagram Feed Account Needs to be Reauthenticated', 'instagram-feed');
 		$bold = __('Access Token Refresh Needed', 'instagram-feed');
-		$details = '<p>' . __('As your Instagram account is set to be "Private", Instagram requires that you reauthenticate your account every 60 days. This a courtesy email to let you know that you need to take action to allow the Instagram feed on your website to continue updating. If you don\'t refresh your account, then a backup cache will be displayed instead.', 'instagram-feed') . '</p>';
+		$details = '<p>' . __('As your Instagram account is set to be "Private", Instagram requires that you reauthenticate your account every 60 days. This is a courtesy email to let you know that you need to take action to allow the Instagram feed on your website to continue updating. If you don\'t refresh your account, then a backup cache will be displayed instead.', 'instagram-feed') . '</p>';
 		$details .= '<p>' . sprintf(__('To prevent your account expiring every 60 days %sswitch your account to be public%s. For more information and to refresh your account, click here to visit the %sInstagram Feed settings page%s on your website.', 'instagram-feed'), '<a href="https://help.instagram.com/116024195217477/In">', '</a>', '<a href="' . esc_url($link) . '">', '</a>') . '</p>';
 	}
 	$message_content = '<h6 style="padding:0;word-wrap:normal;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;font-weight:bold;line-height:130%;font-size: 16px;color:#444444;text-align:inherit;margin:0 0 20px 0;Margin:0 0 20px 0;">' . $bold . '</h6>' . $details;
@@ -1636,16 +1809,30 @@ function sbi_send_report_email()
 function sbi_maybe_send_feed_issue_email()
 {
 	global $sb_instagram_posts_manager;
-	if (!$sb_instagram_posts_manager->are_critical_errors()) {
+
+	$are_critical_errors = $sb_instagram_posts_manager->are_critical_errors();
+
+	// Backup-cache staleness is a time-based signal that can be true with no
+	// critical error at all: a feed can serve saved posts for weeks while the
+	// site looks perfectly healthy. That is precisely the case the staleness
+	// notice exists for, so it has to reach the email report too (SMASH-1975).
+	// Reuses this cron run rather than adding a second scheduler.
+	$staleness = \InstagramFeed\BackupCacheMonitor::evaluate();
+	$is_stale = $staleness['tier'] > 0;
+
+	if (!$are_critical_errors && !$is_stale) {
 		return;
 	}
+
 	$options = get_option('sb_instagram_settings');
 
 	if (isset($options['enable_email_report']) && empty($options['enable_email_report'])) {
 		return;
 	}
 
-	sbi_send_report_email();
+	// A critical error keeps its existing copy — the staleness wording is used
+	// only when staleness is the sole reason we are emailing.
+	sbi_send_report_email($are_critical_errors ? array() : $staleness);
 }
 
 add_action('sb_instagram_feed_issue_email', 'sbi_maybe_send_feed_issue_email');

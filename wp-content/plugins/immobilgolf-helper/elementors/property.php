@@ -92,9 +92,8 @@ class Immobilgolf_Property_Element extends \Elementor\Widget_Base
 					'3'	=> '3',
 					'4'	=> '4',
 					'5'	=> '5',
-					'6'	=> '6',
 				],
-				'default' => '5'
+				'default' => '4'
 			]
 		);
 		$this->add_control(
@@ -163,50 +162,67 @@ class Immobilgolf_Property_Element extends \Elementor\Widget_Base
 		$margin = (($settings['margin'] != '') ? $settings['margin'] : 20);
 		$rows = (($settings['rows'] != '') ? $settings['rows'] : 1);
 		$random = (($settings['random'] != '') ? $settings['random'] : 'no');
-
-		$curl = curl_init();
-		curl_setopt_array($curl, array(
-			CURLOPT_URL => 'https://portal.exileart.it/index.php/frontend/property/it',
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 0,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'POST',
-			CURLOPT_POSTFIELDS => 'type='.$type.'&number='.$number.'&order='.$random.'',
-			CURLOPT_HTTPHEADER => array(
-				'Content-Type: application/x-www-form-urlencoded',
-				'Accept: application/json',
-				'Authorization: ••••••',
-				'Cookie: cisession=Uz1RNwA3VzpSfgspBTlWZwM0VGwEL1UiD2oHd1QgVTwLYVQ8C1tWP1A7AX8JM1F1VTgHZVVhWmBVcAkzVGoDP1ZkADtXY1o8UWVRb102BmRTalE4AGdXZVI1Cz8FYlZiAzBUZwQ8VWIPPQcxVGJVZws3VGMLYVYyUG0BfwkzUXVVOAdnVWNaYFVwCWJULQNYVjcAZ1c0WihRMVEkXSEGJFNnUX4AO1cxUjcLYAUhVmMDMFR4BDVVZw8hBzFUY1V7Cz9UYQs9VnRQZAEuCTJRN1UyB2xVcVovVSEJblQvA1hWNwBkVzVaNFEgUXVdaQZ1U2ZRPwAwVzpSJwsKBWxWJQNwVDsEbFU%2FD10HcVQ9VSELZ1Q%2FC2FWeVBoAXMJPFE%2BVSwHZlVxWmFVIQkxVGwDNFZsACFXPFo7USdRI10NBmdTP1F5AGhXdlJsCy4FelZ0Az9UPwQ3VWAPOAcxVGpVYQs2VGQLM1ZlUG8BZgl7UTxVOwdsVXFaL1UhCW5ULwNYVjIAYlckWjtRdlFsXSEGPFNsUTcAI1ciUj4LKQU5VmcDNlRsBC9VMg9uB3RUJ1U2C2ZUMwtbVj5QPgEuCWBRJFU5ByVVaVpvVWgJKVQ%2BAzBWYwAxVzJaeFFvUSo%3D'
-			),
-		));
-		$response = curl_exec($curl);
-		curl_close($curl);
-		$response = json_decode($response, true);
-		$total_results = $response['total_results'];
-		$results = $response['results'];
+		$uid = 'ig-prop-' . $this->get_id();
 		?>
-		<div class="widget_area sc_widget_slider <?= $number ?> <?= $type ?>">
-			<?php if ($total_results > 0) { ?>
-			<aside class="widget widget_slider <?= $el_class ?>">
+		<div class="widget_area sc_widget_slider <?= esc_attr($number) ?> <?= esc_attr($type) ?>"
+			id="<?= esc_attr($uid) ?>"
+			data-type="<?= esc_attr($type) ?>"
+			data-number="<?= esc_attr($number) ?>"
+			data-order="<?= esc_attr($random) ?>"
+			data-columns="<?= esc_attr($columns) ?>"
+			data-tablet="<?= esc_attr($tablet) ?>"
+			data-mobile="<?= esc_attr($mobile) ?>"
+			data-margin="<?= esc_attr($margin) ?>"
+			data-rows="<?= esc_attr($rows) ?>"
+			data-el-class="<?= esc_attr($el_class) ?>">
+			<aside class="widget widget_slider <?= esc_attr($el_class) ?>">
 				<div class="slider_wrap slider_engine_swiper">
 					<div class="slider_outer slider_swiper_outer slider_style_default slider_outer_direction_horizontal slider_outer_multi slider_outer_nopagination slider_outer_controls slider_outer_controls_side slider_outer_nocentered slider_outer_overflow_hidden slider_outer_titles_lb">
-						<div class="slider_container slider_swiper swiper-slider-container slider_controls slider_controls_side slider_nocentered slider_overflow_hidden slider_titles_lb slider_swipe slider_direction_horizontal slider_multi slider_type_images" data-interval="7000" data-effect="slide" data-pagination="progressbar" data-direction="horizontal" data-slides-per-view="<?= $columns ?>" data-slides-table="<?= $tablet ?>" data-slides-mobile="<?= $mobile ?>" data-slides-row="<?= $rows ?>" data-slides-space="<?= $margin ?>" data-slides-centered="0" data-slides-overflow="1" data-mouse-wheel="0" data-autoplay="0">
-							<div class="slider-wrapper swiper-wrapper">
-								<?= $results ?>
-							</div>
-							<div class="slider_controls_wrap">
-								<a class="slider_prev swiper-button-prev" href="#"></a>
-								<a class="slider_next swiper-button-next" href="#"></a>
+						<div class="slider_container slider_swiper swiper-slider-container slider_controls slider_controls_side slider_nocentered slider_overflow_hidden slider_titles_lb slider_swipe slider_direction_horizontal slider_multi slider_type_images" data-interval="7000" data-effect="slide" data-pagination="progressbar" data-direction="horizontal" data-slides-per-view="<?= esc_attr($columns) ?>" data-slides-table="<?= esc_attr($tablet) ?>" data-slides-mobile="<?= esc_attr($mobile) ?>" data-slides-row="<?= esc_attr($rows) ?>" data-slides-space="<?= esc_attr($margin) ?>" data-slides-centered="0" data-slides-overflow="1" data-mouse-wheel="0" data-autoplay="0">
+							<div class="slider-wrapper swiper-wrapper immobilgolf-property-slides">
+								<div class="immobilgolf-property-loading" style="padding:24px;text-align:center;width:100%;">Loading…</div>
 							</div>
 						</div>
 					</div>
 				</div>
 			</aside>
-			<?php } ?>
 		</div>
+		<script>
+		(function ($) {
+			var $root = $("#<?= esc_js($uid) ?>");
+			if (!$root.length) return;
+			$.ajax({
+				url: "https://portal.immobilgolf.com/index.php/frontend/property/it",
+				type: "POST",
+				dataType: "json",
+				cache: false,
+				xhrFields: { withCredentials: true },
+				crossDomain: true,
+				data: {
+					type: $root.data("type"),
+					number: $root.data("number"),
+					order: $root.data("order"),
+					_: Date.now()
+				}
+			}).done(function (res) {
+				var $slides = $root.find(".immobilgolf-property-slides");
+				if (res && res.total_results > 0 && res.results) {
+					$slides.html(res.results);
+					if (window.jQuery && typeof window.trx_addons_init_sliders === "function") {
+						window.trx_addons_init_sliders($root);
+					} else if (window.jQuery && $root.find(".slider_swiper").length && typeof Swiper !== "undefined") {
+						// Theme may auto-init; trigger resize as fallback.
+						$(window).trigger("resize");
+					}
+				} else {
+					$slides.html("");
+					$root.hide();
+				}
+			}).fail(function () {
+				$root.find(".immobilgolf-property-slides").html("");
+			});
+		})(jQuery);
+		</script>
 		<?php
 	}
 }

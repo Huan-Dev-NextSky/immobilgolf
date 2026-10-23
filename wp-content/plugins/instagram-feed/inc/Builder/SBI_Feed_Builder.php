@@ -56,6 +56,10 @@ class SBI_Feed_Builder
 		add_action('wp_ajax_sbi_dismiss_onboarding', array('InstagramFeed\Builder\SBI_Feed_Builder', 'after_dismiss_onboarding'));
 
 		add_action('wp_ajax_sbi_other_plugins_modal', array('InstagramFeed\Builder\SBI_Feed_Builder', 'sb_other_plugins_modal'));
+
+		// SMASH-1245 Phase A — consent AJAX handler + modal rendering are now owned by the
+		// shared Consent package (action: wp_ajax_sbc_save_consent_choice; admin_footer modal
+		// auto-registered by ConsentManager::init).
 	}
 
 	public static function instance()
@@ -157,7 +161,7 @@ class SBI_Feed_Builder
 	/**
 	 * Update status of onboarding sequence for specific user
 	 *
-	 * @return string|boolean
+	 * @return void
 	 *
 	 * @since 6.0
 	 */
@@ -191,9 +195,9 @@ class SBI_Feed_Builder
 			'facebook' => [
 				'installed' => $active_sb_plugins['is_facebook_installed'],
 				'class' => 'CFF_Elementor_Widget',
-				'link' => 'https://smashballoon.com/custom-facebook-feed/',
+				'link' => 'https://smashballoon.com/custom-facebook-feed/?utm_campaign=instagram-free&utm_source=about-us&utm_medium=marketing',
 				'icon' => self::builder_svg_icons('install-plugins-popup.facebook'),
-				'description' => __('Custom Facebook Feeds is a highly customizable way to display tweets from your Facebook account. Promote your latest content and update your site content automatically.', 'instagram-feed'),
+				'description' => __('Custom Facebook Feeds is a highly customizable way to display posts from your Facebook account. Promote your latest content and update your site content automatically.', 'instagram-feed'),
 				'download_plugin' => 'https://downloads.wordpress.org/plugin/custom-facebook-feed.zip',
 				'dashboard_link' => admin_url('admin.php?page=cff-feed-builder'),
 				'active' => is_plugin_active($active_sb_plugins['facebook_plugin'])
@@ -201,9 +205,9 @@ class SBI_Feed_Builder
 			'instagram' => [
 				'installed' => $active_sb_plugins['is_instagram_installed'],
 				'class' => 'SBI_Elementor_Widget',
-				'link' => 'https://smashballoon.com/instagram-feed/',
+				'link' => 'https://smashballoon.com/instagram-feed/?utm_campaign=instagram-free&utm_source=about-us&utm_medium=marketing',
 				'icon' => self::builder_svg_icons('install-plugins-popup.instagram'),
-				'description' => __('Instagram Feeds is a highly customizable way to display tweets from your Instagram account. Promote your latest content and update your site content automatically.', 'instagram-feed'),
+				'description' => __('Instagram Feeds is a highly customizable way to display posts from your Instagram account. Promote your latest content and update your site content automatically.', 'instagram-feed'),
 				'download_plugin' => 'https://downloads.wordpress.org/plugin/instagram-feed.zip',
 				'dashboard_link' => admin_url('admin.php?page=sbi-feed-builder'),
 				'active' => is_plugin_active($active_sb_plugins['instagram_plugin'])
@@ -211,7 +215,7 @@ class SBI_Feed_Builder
 			'twitter' => [
 				'installed' => $active_sb_plugins['is_twitter_installed'],
 				'class' => 'CTF_Elementor_Widget',
-				'link' => 'https://smashballoon.com/custom-twitter-feeds/',
+				'link' => 'https://smashballoon.com/custom-twitter-feeds/?utm_campaign=instagram-free&utm_source=about-us&utm_medium=marketing',
 				'icon' => self::builder_svg_icons('install-plugins-popup.twitter'),
 				'description' => __('Custom Twitter Feeds is a highly customizable way to display tweets from your Twitter account. Promote your latest content and update your site content automatically.', 'instagram-feed'),
 				'download_plugin' => 'https://downloads.wordpress.org/plugin/custom-twitter-feeds.zip',
@@ -221,9 +225,9 @@ class SBI_Feed_Builder
 			'youtube' => [
 				'installed' => $active_sb_plugins['is_youtube_installed'],
 				'class' => 'SBY_Elementor_Widget',
-				'link' => 'https://smashballoon.com/youtube-feed/',
+				'link' => 'https://smashballoon.com/youtube-feed/?utm_campaign=instagram-free&utm_source=about-us&utm_medium=marketing',
 				'icon' => self::builder_svg_icons('install-plugins-popup.youtube'),
-				'description' => __('YouTube Feeds is a highly customizable way to display tweets from your YouTube account. Promote your latest content and update your site content automatically.', 'instagram-feed'),
+				'description' => __('YouTube Feeds is a highly customizable way to display videos from your YouTube account. Promote your latest content and update your site content automatically.', 'instagram-feed'),
 				'download_plugin' => 'https://downloads.wordpress.org/plugin/feeds-for-youtube.zip',
 				'dashboard_link' => admin_url('admin.php?page=sby-feed-builder'),
 				'active' => is_plugin_active($active_sb_plugins['youtube_plugin'])
@@ -269,7 +273,7 @@ class SBI_Feed_Builder
 
 				$newly_retrieved_source_connection_data = SBI_Source::maybe_source_connection_data();
 				$license_key = get_option('sbi_license_key', '');
-				$upgrade_url = 'https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=lite-upgrade-bar';
+				$upgrade_url = 'https://smashballoon.com/instagram-feed/instagram-lite-upgrade/?utm_campaign=instagram-free&utm_source=lite-upgrade-bar&utm_medium=upgrade-link';
 
 				$active_extensions = array(
 					// Fake.
@@ -311,13 +315,6 @@ class SBI_Feed_Builder
 						'customizeImgPath' => SBI_BUILDER_URL . 'assets/img/welcome-1.png',
 						'embedImgPath' => SBI_BUILDER_URL . 'assets/img/welcome-2.png',
 					),
-					'pluginsInfo' => array(
-						'social_wall' => array(
-							'installed' => isset($installed_plugins['social-wall/social-wall.php']),
-							'activated' => is_plugin_active('social-wall/social-wall.php'),
-							'settingsPage' => admin_url('admin.php?page=sbsw'),
-						)
-					),
 					'allFeedsScreen' => array(
 						'mainHeading' => __('All Feeds', 'instagram-feed'),
 						'columns' => array(
@@ -332,7 +329,7 @@ class SBI_Feed_Builder
 							'toolTip' => __('What are Legacy Feeds?', 'instagram-feed'),
 							'toolTipExpanded' => array(
 								__('Legacy feeds are older feeds from before the version 6 update. You can edit settings for these feeds by using the "Settings" button to the right. These settings will apply to all legacy feeds, just like the settings before version 6, and work in the same way that they used to.', 'instagram-feed'),
-								__('You can also create a new feed, which will now have it\'s own individual settings. Modifying settings for new feeds will not affect other feeds.', 'instagram-feed'),
+								__('You can also create a new feed, which will now have its own individual settings. Modifying settings for new feeds will not affect other feeds.', 'instagram-feed'),
 							),
 							'toolTipExpandedAction' => array(
 								__('Legacy feeds represent shortcodes of old feeds found on your website before <br/>the version 6 update.', 'instagram-feed'),
@@ -433,204 +430,67 @@ class SBI_Feed_Builder
 					'legacyFeeds' => $this->get_legacy_feed_list(),
 					'extensionsPopup' => array(
 						'hashtag' => array(
-							'heading' => __('Upgrade to Pro to get Hashtag Feeds', 'instagram-feed'),
-							'description' => __('Display posts from any public hashtag with an Instagram hashtag feed. Great for pulling in user-generated content associated with your brand, running promotional hashtag campaigns, engaging audiences at events, and more.', 'instagram-feed'),
-							'bullets' => array(
-								'heading' => __('And get much more!', 'instagram-feed'),
-								'content' => array(
-									__('Display Hashtag & Tagged feeds', 'instagram-feed'),
-									__('Powerful visual moderation', 'instagram-feed'),
-									__('Comments and Likes', 'instagram-feed'),
-									__('Highlight specific posts', 'instagram-feed'),
-									__('Multiple layout options', 'instagram-feed'),
-									__('Popup photo/video lightbox', 'instagram-feed'),
-									__('Instagram Stories', 'instagram-feed'),
-									__('Shoppable feeds', 'instagram-feed'),
-									__('Pro support', 'instagram-feed'),
-									__('Post captions', 'instagram-feed'),
-									__('Combine multiple feed types', 'instagram-feed'),
-									__('30 day money back guarantee', 'instagram-feed'),
-								)
-							),
-							'buyUrl' => sprintf('https://smashballoon.com/instagram-feed/demo/hashtag?utm_campaign=instagram-free&utm_source=feed-type&utm_medium=hashtag')
+							'featureName' => __('Hashtag Feeds', 'instagram-feed'),
+							'description' => __('Display posts from any public Instagram hashtag on your website. Perfect for showcasing community content, promotional campaigns, and engaging your audience.', 'instagram-feed'),
+							'imgUrl' => SBI_BUILDER_URL . 'assets/img/extensions-popup/hashtags.jpg',
+							'buyUrl' => 'https://smashballoon.com/instagram-feed/instagram-lite-upgrade/?utm_campaign=instagram-free&utm_source=feed-type&utm_medium=hashtag&utm_content=UpgradeToPro',
+							'demoUrl' => 'https://smashballoon.com/instagram-feed/demo/hashtag/?utm_campaign=instagram-free&utm_source=feed-type&utm_medium=hashtag&utm_content=TryDemo',
 						),
 						'tagged' => array(
-							'heading' => __('Upgrade to Pro to get Tagged Posts Feed', 'instagram-feed'),
-							'description' => __('Display posts that you\'ve been tagged in by other users allowing you to increase your audience\'s engagement with your Instagram account.', 'instagram-feed'),
-							'bullets' => array(
-								'heading' => __('And get much more!', 'instagram-feed'),
-								'content' => array(
-									__('Display Hashtag & Tagged feeds', 'instagram-feed'),
-									__('Powerful visual moderation', 'instagram-feed'),
-									__('Comments and Likes', 'instagram-feed'),
-									__('Highlight specific posts', 'instagram-feed'),
-									__('Multiple layout options', 'instagram-feed'),
-									__('Popup photo/video lightbox', 'instagram-feed'),
-									__('Instagram Stories', 'instagram-feed'),
-									__('Shoppable feeds', 'instagram-feed'),
-									__('Pro support', 'instagram-feed'),
-									__('Post captions', 'instagram-feed'),
-									__('Combine multiple feed types', 'instagram-feed'),
-									__('30 day money back guarantee', 'instagram-feed'),
-								)
-							),
-							'buyUrl' => sprintf('https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=feed-type&utm_medium=tagged')
+							'featureName' => __('Tagged Posts Feed', 'instagram-feed'),
+							'description' => __('Show posts you\'ve been tagged in directly on your website to highlight real customer interactions and boost engagement.', 'instagram-feed'),
+							'imgUrl' => SBI_BUILDER_URL . 'assets/img/extensions-popup/tagged.jpg',
+							'buyUrl' => 'https://smashballoon.com/instagram-feed/instagram-lite-upgrade/?utm_campaign=instagram-free&utm_source=feed-type&utm_medium=tagged&utm_content=UpgradeToPro',
+							'demoUrl' => 'https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=feed-type&utm_medium=tagged&utm_content=TryDemo',
 						),
 						'socialwall' => array(
-							// Combine all your social media channels into one Social Wall
-							'heading' => '<span class="sb-social-wall">' . __('Combine all your social media channels into one', 'instagram-feed') . ' <span>' . __('Social Wall', 'instagram-feed') . '</span></span>',
-							'description' => '<span class="sb-social-wall">' . __('A dash of Instagram, a sprinkle of Facebook, a spoonful of Twitter, and a dollop of YouTube, all in the same feed.', 'instagram-feed') . '</span>',
-							'demoUrl' => 'https://smashballoon.com/social-wall/demo/?utm_campaign=instagram-free&utm_source=feed-type&utm_medium=social-wall&utm_content=learn-more',
-							'buyUrl' => sprintf('https://smashballoon.com/social-wall/demo/?license_key=%s&upgrade=true&utm_campaign=instagram-free&utm_source=feed-type&utm_medium=social-wall&utm_content=Try Demo', $license_key),
-							'bullets' => array(
-								'heading' => __('Upgrade to the All Access Bundle and get:', 'instagram-feed'),
-								'content' => array(
-									__('Instagram Feed Pro', 'instagram-feed'),
-									__('Custom Twitter Feeds Pro', 'instagram-feed'),
-									__('YouTube Feeds Pro', 'instagram-feed'),
-									__('Custom Facebook Feed Pro', 'instagram-feed'),
-									__('All Pro Facebook Extensions', 'instagram-feed'),
-									__('Social Wall Pro', 'instagram-feed'),
-								)
-							),
+							'featureName' => __('Social Wall', 'instagram-feed'),
+							'description' => __('Pull in content from all your social media channels and showcase them in one beautiful, combined feed.', 'instagram-feed'),
+							'imgUrl' => SBI_BUILDER_URL . 'assets/img/extensions-popup/social-wall.jpg',
+							'buyUrl' => 'https://smashballoon.com/instagram-feed/instagram-lite-upgrade/?utm_campaign=instagram-free&utm_source=feed-type&utm_medium=social-wall&utm_content=UpgradeToPro',
+							'demoUrl' => 'https://smashballoon.com/instagram-feed/demo/social-wall/?utm_campaign=instagram-free&utm_source=feed-type&utm_medium=social-wall&utm_content=TryDemo',
 						),
-
-						// Other Types
 						'feedLayout' => array(
-							'heading' => __('Upgrade to Pro to get Feed Layouts', 'instagram-feed'),
-							'description' => __('Choose from one of our built-in layout options; grid, carousel, masonry, and highlight to allow you to showcase your content in any way you want.', 'instagram-feed'),
-							'bullets' => array(
-								'heading' => __('And get much more!', 'instagram-feed'),
-								'content' => array(
-									__('Display Hashtag & Tagged feeds', 'instagram-feed'),
-									__('Powerful visual moderation', 'instagram-feed'),
-									__('Comments and Likes', 'instagram-feed'),
-									__('Highlight specific posts', 'instagram-feed'),
-									__('Multiple layout options', 'instagram-feed'),
-									__('Popup photo/video lightbox', 'instagram-feed'),
-									__('Instagram Stories', 'instagram-feed'),
-									__('Shoppable feeds', 'instagram-feed'),
-									__('Pro support', 'instagram-feed'),
-									__('Post captions', 'instagram-feed'),
-									__('Combine multiple feed types', 'instagram-feed'),
-									__('30 day money back guarantee', 'instagram-feed'),
-								)
-							),
-							'buyUrl' => sprintf('https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=feed-layouts')
+							'featureName' => __('Feed Layout', 'instagram-feed'),
+							'description' => __('Choose from grid, carousel, masonry, and highlight layouts to showcase your content any way you want.', 'instagram-feed'),
+							'imgUrl' => SBI_BUILDER_URL . 'assets/img/extensions-popup/feed-layout.jpg',
+							'buyUrl' => 'https://smashballoon.com/instagram-feed/instagram-lite-upgrade/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=feed-layouts&utm_content=UpgradeToPro',
+							'demoUrl' => 'https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=feed-layouts&utm_content=TryDemo',
 						),
 						'headerLayout' => array(
-							'heading' => __('Get Stories, Followers and Advanced Header Options', 'instagram-feed'),
-							'description' => __('Got stories to tell? We want to help you share them. Display Instagram stories right on your website in a pop-up lightbox to keep your users engaged and on your website for longer.', 'instagram-feed'),
-							'bullets' => array(
-								'heading' => __('And get much more!', 'instagram-feed'),
-								'content' => array(
-									__('Display Hashtag & Tagged feeds', 'instagram-feed'),
-									__('Powerful visual moderation', 'instagram-feed'),
-									__('Comments and Likes', 'instagram-feed'),
-									__('Highlight specific posts', 'instagram-feed'),
-									__('Multiple layout options', 'instagram-feed'),
-									__('Popup photo/video lightbox', 'instagram-feed'),
-									__('Instagram Stories', 'instagram-feed'),
-									__('Shoppable feeds', 'instagram-feed'),
-									__('Pro support', 'instagram-feed'),
-									__('Post captions', 'instagram-feed'),
-									__('Combine multiple feed types', 'instagram-feed'),
-									__('30 day money back guarantee', 'instagram-feed'),
-								)
-							),
-							'buyUrl' => sprintf('https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=header')
+							'featureName' => __('Advanced Header', 'instagram-feed'),
+							'description' => __('Display your Instagram stories directly on your website in a pop-up lightbox and show off your follower count to build credibility.', 'instagram-feed'),
+							'imgUrl' => SBI_BUILDER_URL . 'assets/img/extensions-popup/header.jpg',
+							'buyUrl' => 'https://smashballoon.com/instagram-feed/instagram-lite-upgrade/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=header&utm_content=UpgradeToPro',
+							'demoUrl' => 'https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=header&utm_content=TryDemo',
 						),
-
 						'postStyling' => array(
-							'heading' => __('Display Captions, Likes, and Comments', 'instagram-feed'),
-							'description' => __('Upgrade to Pro to display post captions below each post and in the lightbox, which can be crawled by search engines to help boost SEO.', 'instagram-feed'),
-							'bullets' => array(
-								'heading' => __('And get much more!', 'instagram-feed'),
-								'content' => array(
-									__('Display Hashtag & Tagged feeds', 'instagram-feed'),
-									__('Powerful visual moderation', 'instagram-feed'),
-									__('Comments and Likes', 'instagram-feed'),
-									__('Highlight specific posts', 'instagram-feed'),
-									__('Multiple layout options', 'instagram-feed'),
-									__('Popup photo/video lightbox', 'instagram-feed'),
-									__('Instagram Stories', 'instagram-feed'),
-									__('Shoppable feeds', 'instagram-feed'),
-									__('Pro support', 'instagram-feed'),
-									__('Post captions', 'instagram-feed'),
-									__('Combine multiple feed types', 'instagram-feed'),
-									__('30 day money back guarantee', 'instagram-feed'),
-								)
-							),
-							'buyUrl' => sprintf('https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=posts')
+							'featureName' => __('Post Captions', 'instagram-feed'),
+							'description' => __('Display captions, likes, and comments alongside your posts. Captions are crawlable by search engines, helping boost your SEO.', 'instagram-feed'),
+							'imgUrl' => SBI_BUILDER_URL . 'assets/img/extensions-popup/posts.jpg',
+							'buyUrl' => 'https://smashballoon.com/instagram-feed/instagram-lite-upgrade/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=posts&utm_content=UpgradeToPro',
+							'demoUrl' => 'https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=posts&utm_content=TryDemo',
 						),
-
 						'lightbox' => array(
-							'heading' => __('Upgrade to Pro to enable the popup Lightbox', 'instagram-feed'),
-							'description' => __('Allow visitors to view your photos and videos in a beautiful full size lightbox, keeping them on your site for longer to discover more of your content.', 'instagram-feed'),
-							'bullets' => array(
-								'heading' => __('And get much more!', 'instagram-feed'),
-								'content' => array(
-									__('Display Hashtag & Tagged feeds', 'instagram-feed'),
-									__('Powerful visual moderation', 'instagram-feed'),
-									__('Comments and Likes', 'instagram-feed'),
-									__('Highlight specific posts', 'instagram-feed'),
-									__('Multiple layout options', 'instagram-feed'),
-									__('Popup photo/video lightbox', 'instagram-feed'),
-									__('Instagram Stories', 'instagram-feed'),
-									__('Shoppable feeds', 'instagram-feed'),
-									__('Pro support', 'instagram-feed'),
-									__('Post captions', 'instagram-feed'),
-									__('Combine multiple feed types', 'instagram-feed'),
-									__('30 day money back guarantee', 'instagram-feed'),
-								)
-							),
-							'buyUrl' => sprintf('https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=lightbox')
+							'featureName' => __('Popup Lightbox', 'instagram-feed'),
+							'description' => __('Let visitors view your photos and videos in a full-size popup without leaving your site, keeping them engaged with your content longer.', 'instagram-feed'),
+							'imgUrl' => SBI_BUILDER_URL . 'assets/img/extensions-popup/lightbox.jpg',
+							'buyUrl' => 'https://smashballoon.com/instagram-feed/instagram-lite-upgrade/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=lightbox&utm_content=UpgradeToPro',
+							'demoUrl' => 'https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=lightbox&utm_content=TryDemo',
 						),
-
 						'filtermoderation' => array(
-							'heading' => __('Get Advanced Moderation and Filters with Pro', 'instagram-feed'),
-							'description' => __('Use powerful moderation tools to create feeds of only specific chosen posts, or exclude specific chosen posts. You can also automatically include or exclude posts based on a word or hashtag found in the caption.', 'instagram-feed'),
-							'bullets' => array(
-								'heading' => __('And get much more!', 'instagram-feed'),
-								'content' => array(
-									__('Display Hashtag & Tagged feeds', 'instagram-feed'),
-									__('Powerful visual moderation', 'instagram-feed'),
-									__('Comments and Likes', 'instagram-feed'),
-									__('Highlight specific posts', 'instagram-feed'),
-									__('Multiple layout options', 'instagram-feed'),
-									__('Popup photo/video lightbox', 'instagram-feed'),
-									__('Instagram Stories', 'instagram-feed'),
-									__('Shoppable feeds', 'instagram-feed'),
-									__('Pro support', 'instagram-feed'),
-									__('Post captions', 'instagram-feed'),
-									__('Combine multiple feed types', 'instagram-feed'),
-									__('30 day money back guarantee', 'instagram-feed'),
-								)
-							),
-							'buyUrl' => sprintf('https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=filters')
+							'featureName' => __('Feed Moderation', 'instagram-feed'),
+							'description' => __('Fine-tune your feed by hand-picking or hiding specific posts, or automatically filtering content based on words and hashtags in captions.', 'instagram-feed'),
+							'imgUrl' => SBI_BUILDER_URL . 'assets/img/extensions-popup/filters.jpg',
+							'buyUrl' => 'https://smashballoon.com/instagram-feed/instagram-lite-upgrade/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=filters&utm_content=UpgradeToPro',
+							'demoUrl' => 'https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=filters&utm_content=TryDemo',
 						),
-
 						'shoppablefeed' => array(
-							'heading' => __('Upgrade to Pro to Get Shoppable Feeds', 'instagram-feed'),
-							'description' => __('Automatically link Instagram posts to custom URLs of your choosing by adding the URL in the caption, or manually add links to specific pages or products on your site (or other sites) in a quick and easy way.', 'instagram-feed'),
-							'bullets' => array(
-								'heading' => __('And get much more!', 'instagram-feed'),
-								'content' => array(
-									__('Display Hashtag & Tagged feeds', 'instagram-feed'),
-									__('Powerful visual moderation', 'instagram-feed'),
-									__('Comments and Likes', 'instagram-feed'),
-									__('Highlight specific posts', 'instagram-feed'),
-									__('Multiple layout options', 'instagram-feed'),
-									__('Popup photo/video lightbox', 'instagram-feed'),
-									__('Instagram Stories', 'instagram-feed'),
-									__('Shoppable feeds', 'instagram-feed'),
-									__('Pro support', 'instagram-feed'),
-									__('Post captions', 'instagram-feed'),
-									__('Combine multiple feed types', 'instagram-feed'),
-									__('30 day money back guarantee', 'instagram-feed'),
-								)
-							),
-							'buyUrl' => sprintf('https://smashballoon.com/instagram-feed/demo/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=shoppable')
+							'featureName' => __('Shoppable Feeds', 'instagram-feed'),
+							'description' => __('Turn your feed into a storefront by linking posts to products or pages. Add links automatically through captions or manually assign them to any post.', 'instagram-feed'),
+							'imgUrl' => SBI_BUILDER_URL . 'assets/img/extensions-popup/shoppable.jpg',
+							'buyUrl' => 'https://smashballoon.com/instagram-feed/instagram-lite-upgrade/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=shoppable&utm_content=UpgradeToPro',
+							'demoUrl' => 'https://smashballoon.com/instagram-feed/demo/shoppable/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=shoppable&utm_content=TryDemo',
 						),
 					),
 					'personalAccountScreen' => self::personal_account_screen_text(),
@@ -736,8 +596,20 @@ class SBI_Feed_Builder
 					SBIVER,
 					true
 				);
+				// SMASH-1378 F-002: focus trap for popups declared as role="dialog".
+				wp_enqueue_script(
+					'sbi-popup-focus-trap',
+					SBI_PLUGIN_URL . 'admin/builder/assets/js/popup-focus-trap.js',
+					array(),
+					SBIVER,
+					true
+				);
 				// Customize screens
 				$sbi_builder['customizeScreens'] = $this->get_customize_screens_text();
+
+				// SMASH-1245 Phase A — consent reprompt enqueue + localize + trigger flag are now
+				// owned by the shared Consent package (ConsentManager::init handles enqueue, AJAX, modal).
+
 				wp_localize_script(
 					'sbi-builder-app',
 					'sbi_builder',
@@ -759,6 +631,9 @@ class SBI_Feed_Builder
 	{
 		return array(
 			'done' => __('Done', 'instagram-feed'),
+			'saving' => __('Saving…', 'instagram-feed'),
+			'saved' => __('Saved', 'instagram-feed'),
+			'saveFailed' => __('Failed: ', 'instagram-feed'),
 			'title' => __('Settings', 'instagram-feed'),
 			'dashboard' => __('Dashboard', 'instagram-feed'),
 			'setup' => __('Setup', 'instagram-feed'),
@@ -825,7 +700,7 @@ class SBI_Feed_Builder
 			'advanced' => __('Advanced', 'instagram-feed'),
 			'error' => __('Error:', 'instagram-feed'),
 			'errorNotice' => __('There was an error when trying to connect to Instagram.', 'instagram-feed'),
-			'errorDirections' => '<a href="https://smashballoon.com/instagram-feed/docs/errors/" target="_blank" rel="noopener">' . __('Directions on How to Resolve This Issue', 'instagram-feed') . '</a>',
+			'errorDirections' => '<a href="https://smashballoon.com/instagram-feed/docs/errors/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=docs" target="_blank" rel="noopener">' . __('Directions on How to Resolve This Issue', 'instagram-feed') . '</a>',
 			'dbErrorNotice' => __('There was an error when trying to update the database.', 'instagram-feed'),
 			'errorSource' => __('Source Invalid', 'instagram-feed'),
 			'errorEncryption' => __('Encryption Error', 'instagram-feed'),
@@ -845,6 +720,7 @@ class SBI_Feed_Builder
 			'moderationModeEnterPostId' => __('Or Enter Post IDs to hide manually', 'instagram-feed'),
 			'moderationModeTextareaPlaceholder' => __('Add words here to hide any posts containing these words', 'instagram-feed'),
 			'filtersAndModeration' => __('Filters & Moderation', 'instagram-feed'),
+			'customizerTabs' => __('Customizer Tabs', 'instagram-feed'),
 			'topRated' => __('Top Rated', 'instagram-feed'),
 			'mostRecent' => __('Most recent', 'instagram-feed'),
 			'moderationModePreview' => __('Moderation Mode Preview', 'instagram-feed'),
@@ -905,6 +781,14 @@ class SBI_Feed_Builder
 			'liteFeedUsersSimpleText' => __('Lite Feed Users get a 50% OFF', 'instagram-feed'),
 			'liteFeedUsersAutoCheckout' => __('auto-applied at checkout', 'instagram-feed'),
 			'tryDemo' => __('Try Demo', 'instagram-feed'),
+			'upgradeToPro' => __('Upgrade to Pro', 'instagram-feed'),
+			'isA' => __('is a', 'instagram-feed'),
+			'proFeature' => __('feature', 'instagram-feed'),
+			'pro' => __('Pro', 'instagram-feed'),
+			'liteFeedUsersGet50Off' => __('Lite users get', 'instagram-feed'),
+			'fiftyPercentOff' => __('50% OFF', 'instagram-feed'),
+			'appliedAutomatically' => __('applied automatically', 'instagram-feed'),
+			'moneyBackGuarantee' => __('Try risk-free for 14 days', 'instagram-feed'),
 
 			'displayImagesVideos' => __('Display images and videos in posts', 'instagram-feed'),
 			'viewLikesShares' => __('View likes, shares and comments', 'instagram-feed'),
@@ -930,7 +814,6 @@ class SBI_Feed_Builder
 			),
 			'ctaShowFeatures' => __('Show Features', 'instagram-feed'),
 			'ctaHideFeatures' => __('Hide Features', 'instagram-feed'),
-			'upgradeToPro' => __('Upgrade to Pro', 'instagram-feed'),
 			'redirectLoading' => array(
 				'heading' => __('Redirecting to connect.smashballoon.com', 'instagram-feed'),
 				'description' => __('You will be redirected to our app so you can connect your account in 5 seconds', 'instagram-feed'),
@@ -986,7 +869,7 @@ class SBI_Feed_Builder
 			'type' => $type,
 			'legacyFeeds' => array(
 				'heading' => __('Legacy Feed Settings', 'instagram-feed'),
-				'description' => sprintf(__('These settings will impact %1$s legacy feeds on your site. You can learn more about what legacy feeds are and how they differ from new feeds %2$shere%3$s.', 'instagram-feed'), '<span class="cff-fb-count-placeholder"></span>', '<a href="https://smashballoon.com/doc/instagram-legacy-feeds/" target="_blank" rel="noopener">', '</a>'),
+				'description' => sprintf(__('These settings will impact %1$s legacy feeds on your site. You can learn more about what legacy feeds are and how they differ from new feeds %2$shere%3$s.', 'instagram-feed'), '<span class="cff-fb-count-placeholder"></span>', '<a href="https://smashballoon.com/doc/instagram-legacy-feeds/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=docs" target="_blank" rel="noopener">', '</a>'),
 			),
 			'getStarted' => __('You can now create and customize feeds individually. Click "Add New" to get started.', 'instagram-feed'),
 		);
@@ -1095,7 +978,7 @@ class SBI_Feed_Builder
 			'description' => __('Sources are Instagram accounts your feed will display content from', 'instagram-feed'),
 			'emptySourceDescription' => __('Looks like you have not added any source.<br/>Use “Add Source” to add a new one.', 'instagram-feed'),
 			'mainHashtagHeading' => __('Enter Public Hashtags', 'instagram-feed'),
-			'hashtagDescription' => __('Add one or more hashtag separated by comma', 'instagram-feed'),
+			'hashtagDescription' => __('Add one or more hashtags separated by comma', 'instagram-feed'),
 			'hashtagGetBy' => __('Fetch posts that are', 'instagram-feed'),
 
 			'sourcesListPopup' => array(
@@ -1136,7 +1019,7 @@ class SBI_Feed_Builder
 				'hashtag' => array(
 					'heading' => __('Hashtag', 'instagram-feed'),
 					'icon' => 'hashtag',
-					'description' => __('Add one or more hashtag separated by comma.', 'instagram-feed'),
+					'description' => __('Add one or more hashtags separated by comma.', 'instagram-feed'),
 					'businessRequired' => true,
 					'actionType' => 'inputHashtags'
 				),
@@ -1155,7 +1038,7 @@ class SBI_Feed_Builder
 				'connectAccount' => __('Connect an Instagram Account', 'instagram-feed'),
 				'connectAccountDescription' => __('This does not give us permission to manage your Instagram account, it simply allows the plugin to see a list of them and retrieve their public content from the API.', 'instagram-feed'),
 				'connect' => __('Connect', 'instagram-feed'),
-				'alreadyHave' => __('Already have a API Token and Access Key for your account?', 'instagram-feed'),
+				'alreadyHave' => __('Already have an API Token and Access Key for your account?', 'instagram-feed'),
 				'addManuallyLink' => __('Add Account Manually', 'instagram-feed'),
 				'selectAccount' => __('Select an Instagram Account', 'instagram-feed'),
 				'showing' => __('Showing', 'instagram-feed'),
@@ -1297,7 +1180,7 @@ class SBI_Feed_Builder
 			'upgrade' => array(
 				'name' => __('Upgrade to Pro', 'instagram-feed'),
 				'icon' => 'instagram',
-				'link' => 'https://smashballoon.com/instagram-feed/'
+				'link' => 'https://smashballoon.com/instagram-feed/?utm_campaign=instagram-free&utm_source=customizer&utm_medium=marketing'
 			),
 			'platforms' => array(
 				array(
@@ -1380,7 +1263,7 @@ class SBI_Feed_Builder
 				'displayName' => __('YouTube', 'instagram-feed'),
 				'name' => __('Feeds for YouTube', 'instagram-feed'),
 				'author' => __('By Smash Balloon', 'instagram-feed'),
-				'description' => __('To display a YouTube feed, our YouTube plugin is required. It provides a simple yet powerful way to display videos from YouTube on your website, Increasing engagement with your channel while keeping visitors on your website.', 'instagram-feed'),
+				'description' => __('To display a YouTube feed, our YouTube plugin is required. It provides a simple yet powerful way to display videos from YouTube on your website, increasing engagement with your channel while keeping visitors on your website.', 'instagram-feed'),
 				'dashboard_permalink' => admin_url('admin.php?page=youtube-feed'),
 				'svgIcon' => self::builder_svg_icons('install-plugins-popup.youtube'),
 				'installed' => $active_sb_plugins['is_youtube_installed'],
@@ -1392,7 +1275,7 @@ class SBI_Feed_Builder
 				'displayName' => __('TikTok', 'instagram-feed'),
 				'name' => __('Feeds for TikTok', 'instagram-feed'),
 				'author' => __('By Smash Balloon', 'instagram-feed'),
-				'description' => __("To display a TikTok feed, our TikTok plugin is required. It allows you to seamlessly integrate your TikTok account’s videos into your WordPress website.", 'instagram-feed'),
+				'description' => __("To display a TikTok feed, our TikTok plugin is required. It allows you to seamlessly integrate your TikTok account's videos into your WordPress website.", 'instagram-feed'),
 				'dashboard_permalink' => admin_url('admin.php?page=sbtt'),
 				'svgIcon' => self::builder_svg_icons('install-plugins-popup.tiktok'),
 				'installed' => $active_sb_plugins['is_tiktok_installed'],
@@ -1796,7 +1679,7 @@ class SBI_Feed_Builder
 			'mainHeading1' => __('We’re almost there...', 'instagram-feed'),
 			'mainHeading2' => __('Update Personal Account', 'instagram-feed'),
 			'mainHeading3' => __('Add Instagram Profile Picture and Bio', 'instagram-feed'),
-			'mainDescription' => __('Instagram does not provide us access to your profile picture or bio for personal accounts. Would you like to set up a custom profile photo and bio?.', 'instagram-feed'),
+			'mainDescription' => __('Instagram does not provide us access to your profile picture or bio for personal accounts. Would you like to set up a custom profile photo and bio?', 'instagram-feed'),
 			'bioLabel' => __('Bio (140 Characters)', 'instagram-feed'),
 			'bioPlaceholder' => __('Add your profile bio here', 'instagram-feed'),
 			'confirmBtn' => __('Yes, let\'s do it', 'instagram-feed'),

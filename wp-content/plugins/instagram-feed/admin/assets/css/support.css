@@ -204,7 +204,7 @@
     border: 1px solid #DCDDE1;
     position: relative;
     text-decoration: none;
-    transition: all 0.15s ease-in-out;
+    transition: all var(--sb-duration-150) ease-in-out;
 }
 
 .sbi-fb-hd-btn:focus {
@@ -292,6 +292,17 @@
 }
 
 .sbi-section-header .sbi-search-doc .sbi-search-doc-field .sb-btn-icon {
+    /* R3 sweep converted this from <span> to <button> for keyboard a11y;
+       strip UA button defaults so the magnifier renders as an icon, not
+       a bordered button overlapping the input. */
+    appearance: none;
+    -webkit-appearance: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
     position: absolute;
     left: 15px;
     top: 11px;
@@ -446,7 +457,7 @@
     text-align: center;
     text-decoration: none;
     padding: 6px;
-    transition: all 0.15s ease-in-out;
+    transition: all var(--sb-duration-150) ease-in-out;
 }
 
 .sbi-support-blocks .sbi-sb-button a:hover,
@@ -596,7 +607,7 @@
     height: 38px;
     padding: 5px 20px 5px 12px;
     cursor: pointer;
-    transition: all 0.15s ease-in-out;
+    transition: all var(--sb-duration-150) ease-in-out;
 }
 
 .sbi-system-info-section .sbi-system-header .sbi-copy-btn:hover {
@@ -645,6 +656,7 @@
     height: 123px;
     font-family: 'Fira Code', monospace;
     word-break: break-all;
+    white-space: pre-wrap;
 }
 
 .sbi-system-info-section .sbi-system-info .system_info.expanded {
@@ -671,7 +683,7 @@
     position: relative;
     font-weight: 500;
     cursor: pointer;
-    transition: all .15s ease-in-out;
+    transition: all var(--sb-duration-150) ease-in-out;
 }
 
 .sbi-system-info-section .sbi-system-info .sbi-expand-btn:hover {
@@ -744,18 +756,18 @@
     border: 1px solid #DCDDE1;
     border-radius: 2px;
     font-weight: 500;
-    transition: all .15s ease-in-out;
+    transition: all var(--sb-duration-150) ease-in-out;
     cursor: pointer;
 }
 
 .sbi-export-settings-section .sbi-btn:disabled {
     cursor: not-allowed;
-    color: #8C8F9A;
+    color: var(--sb-text-secondary);
     background: #F3F4F5;
 }
 
 .sbi-export-settings-section .sbi-btn:disabled:hover {
-    color: #8C8F9A;
+    color: var(--sb-text-secondary);
 }
 
 .sbi-export-settings-section .sbi-btn span {
@@ -771,217 +783,7 @@
 }
 
 
-/*** 4.0 Sticky Widget ***/
-.sbi-stck-wdg {
-    position: fixed;
-    right: 21px;
-    z-index: 9;
-    bottom: 20px;
-}
-
-.sbi-stck-wdg-btn {
-    width: 52px;
-    height: 52px;
-    background: #fff;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    filter: drop-shadow(0px 9px 13px rgba(0, 0, 0, 0.2));
-}
-
-.sbi-stck-wdg-btn svg {
-    width: 25px;
-    fill: #FE544F;
-    height: 33px;
-    float: left;
-}
-
-.sbi-stck-wdg[data-active="true"] .sbi-stck-wdg-btn-cls,
-.sbi-stck-wdg[data-active="true"] .sbi-stck-wdg-btn-cls svg {
-    display: block;
-}
-
-.sbi-stck-wdg-btn-cls {
-    width: inherit;
-    height: inherit;
-    position: relative;
-    color: #364152;
-    box-shadow: 0px 1px 6px rgb(0 0 0 / 5%), 0px 9px 12px rgb(0 0 0 / 5%);
-    border-radius: 70px;
-}
-
-.sbi-stck-wdg-btn-cls svg {
-    width: 14px;
-    height: 14px;
-    position: absolute;
-    top: 50%;
-    right: 0;
-    bottom: 0;
-    left: 50%;
-    margin-top: -7px;
-    margin-left: -7px;
-}
-
-.sbi-stck-pop {
-    position: absolute;
-    width: 292px;
-    height: auto;
-    background: #fff;
-    border: 1px solid #E2E8F0;
-    box-sizing: border-box;
-    box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.15), 0px 3px 14px rgba(0, 0, 0, 0.12);
-    border-radius: 2px;
-    padding: 20px;
-    right: 0px;
-    bottom: 66px;
-    color: #141B38;
-    padding-bottom: 82px;
-}
-
-.sbi-stck-wdg[data-active="true"] .sbi-stck-pop {
-    bottom: 66px;
-    opacity: 1;
-    visibility: visible;
-}
-
-.sbi-stck-pop svg {
-    fill: currentColor;
-}
-
-.sbi-stck-el-list {
-    border: 1px solid #DCDDE1;
-    border-radius: 2px;
-}
-
-.sbi-stck-el {
-    display: flex;
-    align-items: center;
-    padding: 11px 13px;
-    border-bottom: 1px solid #DCDDE1;
-    transition: background .15s ease-in-out;
-    font-size: 12px;
-}
-
-.sbi-stck-el:hover {
-    background: #F3F4F5;
-}
-
-.sbi-stck-el:last-of-type {
-    border-bottom: 0px;
-}
-
-.sbi-stck-el-list .sbi-chevron svg {
-    width: 5px;
-    height: 8px;
-}
-
-.sbi-fs-a {
-    width: 100%;
-    height: 100%;
-    display: block;
-    position: absolute;
-    left: 0;
-    top: 0;
-    z-index: 1;
-}
-
-.sbi-stck-el .sbi-stck-el-txt {
-    color: #27303F;
-}
-
-.sbi-stck-el.sbi-stck-el-upgrd {
-    padding: 9px 14px;
-    font-size: 14px;
-    background: var(--cl-orange);
-    color: #fff;
-    position: relative;
-    transition: background .15s ease-in-out;
-    font-weight: 600;
-}
-
-.sbi-chevron {
-    position: absolute;
-    right: 14px
-}
-
-.sbi-stck-el.sbi-stck-el-upgrd .sbi-stck-el-txt {
-    color: #fff;
-}
-
-.sbi-stck-el.sbi-stck-el-upgrd:after {
-    top: 20px;
-    opacity: 1;
-}
-
-.sbi-stck-el-icon {
-    margin-right: 10px;
-}
-
-.sbi-stck-el-icon svg {
-    width: 17px;
-    float: left;
-}
-
-.sbi-stck-title {
-    margin-top: 20px;
-    margin-bottom: 10px;
-    color: #141B38;
-    font-weight: 600;
-    font-size: 14px;
-    line-height: 160%;
-}
-
-.sbi-stck-follow {
-    background: #F3F4F5;
-    margin-top: 20px;
-    left: 0px;
-    bottom: 0px;
-    position: absolute;
-    padding: 12px 20px;
-    display: flex;
-    align-items: center;
-}
-
-.sbi-stck-follow span {
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.sbi-stck-flw-links {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-left: auto;
-}
-
-.sbi-stck-flw-links a {
-    width: 36px;
-    height: 28px;
-    color: inherit;
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    margin-left: 4px;
-    border-radius: 2px;
-    transition: background .15s ease-in-out;
-}
-
-.sbi-stck-flw-links svg {
-    width: 17px;
-    color: #141B38;
-}
-
-.sbi-stck-flw-links a:hover {
-    background: #fff;
-}
-
-.sbi-stck-flw-links a:hover svg {
-    color: inherit;
-}
-
-/*** SB NOTIFICATION ELEMENT ***/
+/*** 5.0 - SB NOTIFICATION ELEMENT ***/
 .sb-notification-ctn {
     position: fixed;
     bottom: -100px;
@@ -1001,13 +803,13 @@
 }
 
 .sb-notification-ctn[data-active="hidden"] {
-    -webkit-animation: sbi-notification-hide .5s forwards linear;
-    animation: sbi-notification-hide .5s forwards linear;
+    -webkit-animation: sbi-notification-hide var(--sb-duration-500) forwards linear;
+    animation: sbi-notification-hide var(--sb-duration-500) forwards linear;
 }
 
 .sb-notification-ctn[data-active="shown"] {
-    -webkit-animation: sbi-notification-show .5s forwards linear;
-    animation: sbi-notification-show .5s forwards linear;
+    -webkit-animation: sbi-notification-show var(--sb-duration-500) forwards linear;
+    animation: sbi-notification-show var(--sb-duration-500) forwards linear;
 }
 
 @-webkit-keyframes sbi-notification-show {
@@ -1258,10 +1060,6 @@
     right: auto;
     top: 10px;
     bottom: auto;
-}
-
-.sbi-stck-el.sbi-stck-el-upgrd svg path {
-    fill: #fff !important;
 }
 
 .sbi-tempuser-settings-section {

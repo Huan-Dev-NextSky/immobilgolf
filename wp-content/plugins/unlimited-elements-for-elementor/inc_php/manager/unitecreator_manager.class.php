@@ -53,7 +53,7 @@ class UniteCreatorManager{
 		$objAddonType = UniteCreatorAddonType::getAddonTypeObject($addonType);
 		
 		$manager = UniteProviderFunctionsUC::applyFilters(UniteCreatorFilters::FILTER_GET_MANAGER_OBJECT_BYDATA, null, $data);
-				
+		
 		if(empty($manager)){
 			if($objAddonType->isLayout == true)
 				$manager = new UniteCreatorManagerLayouts();
@@ -719,6 +719,7 @@ class UniteCreatorManager{
 		
 		//clear dropzone third party inclues
 		UniteFunctionsWPUC::findAndRemoveInclude("dropzone.min");
+		UniteFunctionsWPUC::findAndRemoveInclude("dropzone");
 		
 		
 		HelperUC::addScript("dropzone", "dropzone_js","js/dropzone");

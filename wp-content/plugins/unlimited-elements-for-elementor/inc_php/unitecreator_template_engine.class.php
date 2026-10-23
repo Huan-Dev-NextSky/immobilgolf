@@ -17,7 +17,7 @@ class UniteCreatorTemplateEngineWork{
 	protected $addon = null;
 	protected $objParamsProcessor;
 	protected $isItemsFromPosts = false;
-
+	
 	private static $arrSetVarsCache = array();
 	private static $urlBaseCache = null;
 	private static $isPostIDSaved = false;
@@ -106,8 +106,115 @@ class UniteCreatorTemplateEngineWork{
 	
 	
 	public function a_____CUSTOM_FUNCTIONS____(){}
+	
+	/**
+	 * get schema settings from params
+	 */
+	private function getSchemaSettings($arrValues, $paramName){
+								
+		
+	}
+	
+	/**
+	 * check and put schema items by param
+	 */
+	public function checkPutSchemaItems($paramName){
+		
+		$param = $this->addon->getParamByName($paramName);
+		$type = UniteFunctionsUC::getVal($param, "type");
 
+		if($type != UniteCreatorDialogParam::PARAM_SPECIAL)
+			return(false);
+		
+		$arrValues = UniteFunctionsUC::getVal($param, "value");
 
+		if(empty($arrValues))
+			return(false);
+
+		$isEnable = UniteFunctionsUC::getVal($arrValues, $paramName."_enable");
+		$isEnable = UniteFunctionsUC::strToBool($isEnable);
+		
+		if($isEnable == false)
+			return(false);
+		
+		$schemaType = UniteFunctionsUC::getVal($arrValues, $paramName."_type");
+		
+		$schemaSelection = UniteFunctionsUC::getVal($arrValues, $paramName."_selection");
+		
+		if($schemaSelection == "custom")
+			$schemaType = "custom";
+		
+		$arrParamsItems = $this->addon->getParamsItems();
+		
+		$arrSettings = array();
+		foreach($arrValues as $key=>$value){
+			$key = str_replace("{$paramName}_","",$key);
+			$arrSettings[$key] = $value;
+		}
+		
+		$objSchema = new UniteCreatorSchema();
+		$objSchema->putSchemaItems($schemaType, $this->arrItems, $arrParamsItems, $arrSettings);
+		
+	}
+	
+	/**
+	 * put schema items by global params like post list or multisource
+	 */
+	private function putSchemaItemsGlobal(){
+		
+		$type = $this->addon->getItemsType();
+		
+		$paramName = "ue_schema";
+		
+		$isEnable = UniteFunctionsUC::getVal($this->arrParams, $paramName."_enable");
+		$isEnable = UniteFunctionsUC::strToBool($isEnable);
+		
+		if($isEnable == false)
+			return(false);
+		
+		$schemaType = UniteFunctionsUC::getVal($this->arrParams, $paramName."_type");
+		
+		$schemaSelection = UniteFunctionsUC::getVal($this->arrParams, $paramName."_selection");
+		
+		if($schemaSelection == "custom")
+			$schemaType = "custom";
+		
+		$arrParamsItems = null;
+		
+		$arrSettings = array();
+		foreach($this->arrParams as $key=>$value){
+						
+			if(strpos($key, $paramName) === false)
+				continue;	
+			
+			$key = str_replace("{$paramName}_","",$key);
+			$arrSettings[$key] = $value;
+		}
+		
+		
+		switch($type){
+			case UniteCreatorAddon::ITEMS_TYPE_POST:
+				
+				$postParam = $this->addon->getParamByType(UniteCreatorDialogParam::PARAM_POSTS_LIST);
+				
+				$postListName = UniteFunctionsUC::getVal($postParam, "name");
+				
+				$arrSettings["post_list_name"] = $postListName;				
+			break;
+			case UniteCreatorAddon::ITEMS_TYPE_MULTISOURCE:
+				
+				$arrParamsItems = $this->addon->getParamsItems();
+				
+			break;
+		}
+		
+		
+		$objSchema = new UniteCreatorSchema();
+		$objSchema->putSchemaItemsByType($type, $schemaType, $this->arrItems, $arrParamsItems, $arrSettings);
+		
+	}
+	
+	
 	/**
 	 * output some item
 	 */
@@ -131,7 +238,9 @@ class UniteCreatorTemplateEngineWork{
 
 			//woo commerce global object product save
 			if($postType == "product" && function_exists("wc_get_product")){
+				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- WooCommerce global product object.
 				global $product;
+				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- WooCommerce global product object.
 				$product = wc_get_product(GlobalsProviderUC::$lastObjectID);
 			}
 
@@ -161,6 +270,8 @@ class UniteCreatorTemplateEngineWork{
 				$GLOBALS["post"] = $post;
 
 				//get dynamic settings from the widget if exists
+				$arrDynamicSettings = apply_filters("uelm_get_current_widget_settings", array());
+				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 				$arrDynamicSettings = apply_filters("ue_get_current_widget_settings", array());
 				
 			}
@@ -175,7 +286,7 @@ class UniteCreatorTemplateEngineWork{
 		GlobalsProviderUC::$lastItemParams = $params;
 
 		$htmlItem = $this->twig->render($templateName, $params);
-		$htmlItem = do_shortcode($htmlItem);
+		$htmlItem = HelperProviderUC::processOutputShortcodes($htmlItem);
 
 		if(!empty($sap) && $index !== 0)
 			uelm_echo($sap);
@@ -401,46 +512,6 @@ class UniteCreatorTemplateEngineWork{
 		$this->putItems(null, "css_item");
 	}
 
-	/**
-	 * check and put schema items by param
-	 */
-	public function checkPutSchemaItems($paramName){
-		
-		$param = $this->addon->getParamByName($paramName);
-		$type = UniteFunctionsUC::getVal($param, "type");
-
-		if($type != UniteCreatorDialogParam::PARAM_SPECIAL)
-			return(false);
-		
-		$arrValues = UniteFunctionsUC::getVal($param, "value");
-
-		if(empty($arrValues))
-			return(false);
-
-		$isEnable = UniteFunctionsUC::getVal($arrValues, $paramName."_enable");
-		$isEnable = UniteFunctionsUC::strToBool($isEnable);
-		
-		if($isEnable == false)
-			return(false);
-		
-		$schemaType = UniteFunctionsUC::getVal($arrValues, $paramName."_type");
-		
-		$showDebug = UniteFunctionsUC::getVal($arrValues, $paramName."_debug");
-		
-		$title = UniteFunctionsUC::getVal($arrValues, $paramName."_title");
-					
-		$arrParamsItems = $this->addon->getParamsItems();
-
-		$arrSettings = array();
-		foreach($arrValues as $key=>$value){
-			$key = str_replace("{$paramName}_","",$key);
-			$arrSettings[$key] = $value;
-		}
-		
-		$objSchema = new UniteCreatorSchema();
-		$objSchema->putSchemaItems($schemaType, $this->arrItems, $arrParamsItems, $arrSettings);
-		
-	}
 
 
 
@@ -565,22 +636,22 @@ class UniteCreatorTemplateEngineWork{
 	 * filter uc date, clear html first, then replace the date
 	 */
 	public function filterUCDate($dateStamp, $format = "", $formatDateFrom = "d/m/Y"){
-				
+		
 		//get the time ago string
-
+		
 		if($format === "time_ago"){
 			$strTimeAgo = UniteFunctionsUC::getTimeAgoString($dateStamp);
 
 			return($strTimeAgo);
 		}
-
+		
 		if($format === "time_ago_short"){
 
 			$strTimeAgo = UniteFunctionsUC::getTimeAgoString($dateStamp, "short");
 
 			return($strTimeAgo);
 		}
-
+		
 
 		if(empty($format))
 			$format = get_option("date_format");
@@ -641,10 +712,10 @@ class UniteCreatorTemplateEngineWork{
 
 		$value = UniteFunctionsUC::getPostGetVariable($varName, $default , UniteFunctionsUC::SANITIZE_TEXT_FIELD);
 
-		if(empty($value))
+		if($value === "" || $value === null)
 			$value = $default;
 
-		uelm_echo($value);
+		uelm_echo(esc_attr($value));
 	}
 
 
@@ -688,7 +759,7 @@ class UniteCreatorTemplateEngineWork{
 	 * get all data
 	 */
 	public function getData(){
-
+		
 		$data = $this->arrParams;
 
 		return($data);
@@ -747,23 +818,23 @@ class UniteCreatorTemplateEngineWork{
 		//run action, without or with params
 
 		if($param === null){
-			do_action($tag);
+			do_action($tag); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Hook name comes from the widget template and is passed through.
 			return(false);
 		}
 
 		//$param exists
 
 		if($param2 === null){
-			do_action($tag, $param);
+			do_action($tag, $param); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Hook name comes from the widget template and is passed through.
 			return(false);
 		}
 
 		if($param3 === null){
-			do_action($tag, $param, $param2);
+			do_action($tag, $param, $param2); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Hook name comes from the widget template and is passed through.
 			return(false);
 		}
 
-		do_action($tag, $param, $param2, $param3);
+		do_action($tag, $param, $param2, $param3); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Hook name comes from the widget template and is passed through.
 
 	}
 
@@ -1076,8 +1147,10 @@ class UniteCreatorTemplateEngineWork{
 			return($newPrice);
 
 		if(!empty($variationID))
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- WooCommerce global product object.
 			$product = wc_get_product($variationID);
 		else
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- WooCommerce global product object.
 			$product = wc_get_product(GlobalsProviderUC::$lastObjectID);
 
 		if(empty($product))
@@ -1085,6 +1158,7 @@ class UniteCreatorTemplateEngineWork{
 
 		try{
 
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 			$newPrice = apply_filters("woocommerce_get_price_html",$newPrice, $product);
 
 		}catch(Exception $e){
@@ -1101,6 +1175,31 @@ class UniteCreatorTemplateEngineWork{
 		$arrOutput = UniteFunctionsUC::jsonDecode($strJson);
 
 		return($arrOutput);
+	}
+	
+	
+	/**
+	 * make fitler post time ago output
+	 */
+	public function filterPostTimeAgo($arrPost){
+		
+		//dmp($arrPost);
+		
+		// Always use post creation date (never modified date).
+		$timeStamp = UniteFunctionsUC::getVal($arrPost, "date_gmt");
+		
+		if(UniteFunctionsUC::isTimeStamp($timeStamp) == false)
+			$timeStamp = UniteFunctionsUC::getVal($arrPost, "date");
+		
+		if(UniteFunctionsUC::isTimeStamp($timeStamp) == false)
+			return("");
+		
+		$strTimeAgo = UniteFunctionsUC::getTimeAgoString((int)$timeStamp);
+		
+		//dmp($timeStamp);
+		//dmp($strTimeAgo);
+
+		return($strTimeAgo);
 	}
 
 
@@ -1473,7 +1572,7 @@ class UniteCreatorTemplateEngineWork{
 				return($data);
 			break;
 			case "put_schema_items_json":
-
+			
 					//$arg1- titleKey, $arg2 - contentKey, $arg3 - schemaName
 					
 					$this->putSchemaItems($arg1, $arg2, $arg3);
@@ -1481,6 +1580,11 @@ class UniteCreatorTemplateEngineWork{
 			case "put_schema_items_json_byparam":
 					
 					$this->checkPutSchemaItems($arg1);
+			break;
+			case "put_schema_items_json_global":
+				
+					$this->putSchemaItemsGlobal();
+				
 			break;
 			case "render":		//render twig template
 
@@ -1499,7 +1603,7 @@ class UniteCreatorTemplateEngineWork{
 			case "get_encoded_image":
 
 				$content = HelperUC::$operations->getLocalFileContentsByUrl($arg1);
-
+				
 				if(empty($content))
 					return(null);
 
@@ -1604,7 +1708,7 @@ class UniteCreatorTemplateEngineWork{
 				require_once GlobalsUC::$pathFramework."alphabet_array.class.php";
 				require_once GlobalsUC::$pathFramework."alphabet.class.php";
 				
-				$objAlphabet = new UELanguageAlphabets();
+				$objAlphabet = new UELM_LanguageAlphabets();
 				$arrAlphabet = $objAlphabet->getAlphabetForWidget($arg1);
 				//$arrAlphabet = $objAlphabet->getAlphabetForWidgetNew($arg1);
 				
@@ -1615,7 +1719,7 @@ class UniteCreatorTemplateEngineWork{
 				require_once GlobalsUC::$pathFramework."alphabet_array.class.php";
 				require_once GlobalsUC::$pathFramework."alphabet.class.php";
 				
-				$objAlphabet = new UELanguageAlphabets();
+				$objAlphabet = new UELM_LanguageAlphabets();
 				$arrAlphabet = $objAlphabet->getAlphabetForWidgetNew($arg1);
 				
 				return($arrAlphabet);
@@ -1776,7 +1880,8 @@ class UniteCreatorTemplateEngineWork{
 		$filterPriceNumberFormat = new Twig\TwigFilter("price_number_format", array($this, "filterPriceNumberFormat"));
 		$filterWcPrice = new Twig\TwigFilter("wc_price", array($this, "filterWcPrice"));
 		$filterJsonDecode = new Twig\TwigFilter("json_decode", array($this, "filterJsonDecode"));
-
+		$filterTimeAgo = new Twig\TwigFilter("time_ago", array($this, "filterPostTimeAgo"));
+		
 		$putTestHtml = new Twig\TwigFunction('putTestHTML', array($this,"putTestHTML"));
 
 		//override filters
@@ -1842,6 +1947,7 @@ class UniteCreatorTemplateEngineWork{
 		$this->twig->addFilter($filterPriceNumberFormat);
 		$this->twig->addFilter($filterWcPrice);
 		$this->twig->addFilter($filterJsonDecode);
+		$this->twig->addFilter($filterTimeAgo);
 
 		//pro functions
 		$this->twig->addFunction($doAction);
@@ -1871,8 +1977,8 @@ class UniteCreatorTemplateEngineWork{
 
 		$arrOptions = array();
 		$arrOptions["debug"] = true;
-
-
+		
+		
 		if(class_exists("Twig\\Environment") == false){
 
 			$version = "";
@@ -1938,6 +2044,164 @@ class UniteCreatorTemplateEngineWork{
 
 
 	/**
+	 * In the JS template, a print inside quotes must be JS-escaped.
+	 * |raw disables Twig escaping, so a quote in the value breaks out of the string.
+	 */
+	private function escapeRawFiltersInJsTemplate($template){
+
+		return($this->escapeRawFiltersInQuotedPrints($template, "js"));
+	}
+
+	/**
+	 * In HTML templates, a print inside a quoted attribute must be attribute-escaped.
+	 * A print inside a script block is a JS string. Unquoted |raw stays as-is
+	 * (icons, prebuilt attribute strings, and HTML content).
+	 */
+	private function escapeRawFiltersInHtmlTemplate($template){
+
+		if(is_string($template) == false || $template === "")
+			return($template);
+
+		if(stripos($template, "raw") === false)
+			return($template);
+
+		$parts = preg_split('/(<script\b[^>]*>.*?<\/script>)/is', $template, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+		if(is_array($parts) == false)
+			return($this->escapeRawFiltersInQuotedPrints($template, "html_attr"));
+
+		$output = "";
+
+		foreach($parts as $part){
+
+			if(preg_match('/^<script\b/i', $part) == 1){
+				$output .= $this->escapeRawFiltersInScriptTag($part);
+				continue;
+			}
+
+			$output .= $this->escapeRawFiltersInQuotedPrints($part, "html_attr");
+		}
+
+		return($output);
+	}
+
+	/**
+	 * Escape the opening tag as HTML, and the script body as JavaScript.
+	 */
+	private function escapeRawFiltersInScriptTag($tag){
+
+		$openEnd = strpos($tag, ">");
+
+		if($openEnd === false)
+			return($this->escapeRawFiltersInQuotedPrints($tag, "html_attr"));
+
+		$closeStart = stripos($tag, "</script>", $openEnd);
+
+		if($closeStart === false)
+			return($this->escapeRawFiltersInQuotedPrints($tag, "html_attr"));
+
+		$open = substr($tag, 0, $openEnd + 1);
+		$inner = substr($tag, $openEnd + 1, $closeStart - ($openEnd + 1));
+		$close = substr($tag, $closeStart);
+
+		$open = $this->escapeRawFiltersInQuotedPrints($open, "html_attr");
+		$inner = $this->escapeRawFiltersInJsTemplate($inner);
+
+		return($open.$inner.$close);
+	}
+
+	/**
+	 * Replace a trailing |raw on Twig prints that sit inside ' or ".
+	 */
+	private function escapeRawFiltersInQuotedPrints($template, $strategy){
+
+		if(is_string($template) == false || $template === "")
+			return($template);
+
+		if(strpos($template, "raw") === false)
+			return($template);
+
+		$length = strlen($template);
+		$output = "";
+		$quote = "";
+		$index = 0;
+
+		while($index < $length){
+
+			$char = $template[$index];
+
+			if($quote === ""){
+
+				if($char === "'" || $char === '"')
+					$quote = $char;
+
+				$output .= $char;
+				$index++;
+				continue;
+			}
+
+			if($char === "\\" && ($index + 1) < $length){
+				$output .= $char.$template[$index + 1];
+				$index += 2;
+				continue;
+			}
+
+			if($char === $quote){
+				$quote = "";
+				$output .= $char;
+				$index++;
+				continue;
+			}
+
+			if($char === "{" && ($index + 1) < $length && $template[$index + 1] === "{"){
+
+				$end = strpos($template, "}}", $index + 2);
+
+				if($end === false){
+					$output .= $char;
+					$index++;
+					continue;
+				}
+
+				$print = substr($template, $index, ($end + 2) - $index);
+				$print = $this->replaceRawFilterWithContextEscape($print, $strategy);
+
+				$output .= $print;
+				$index = $end + 2;
+				continue;
+			}
+
+			$output .= $char;
+			$index++;
+		}
+
+		return($output);
+	}
+
+	/**
+	 * Replace a trailing |raw on one Twig print.
+	 * |raw after html_attr stops a later auto-escape from encoding the & in &#x27; and &quot;.
+	 */
+	private function replaceRawFilterWithContextEscape($print, $strategy){
+
+		if(strpos($print, "|e(") !== false)
+			return($print);
+
+		if($strategy === "html_attr")
+			$filter = "|e('html_attr')|raw";
+		else
+			$filter = "|e('js')";
+
+		$replaced = preg_replace('/\|\s*raw(\s*)\}\}$/', $filter.'$1}}', $print, 1);
+
+		if(is_string($replaced) == false)
+			return($print);
+
+		return($replaced);
+	}
+
+
+	/**
 	 * add template
 	 */
 	public function addTemplate($name, $html, $showError = true){
@@ -1954,6 +2218,10 @@ class UniteCreatorTemplateEngineWork{
 			UniteFunctionsUC::throwError("template with name: $name already exists");
 		}
 
+		if($name === "js")
+			$html = $this->escapeRawFiltersInJsTemplate($html);
+		elseif($name === "html" || $name === "item" || $name === "item2")
+			$html = $this->escapeRawFiltersInHtmlTemplate($html);
 
 		$this->arrTemplates[$name] = $html;
 	}
@@ -1965,7 +2233,10 @@ class UniteCreatorTemplateEngineWork{
 	public function setParams($params){
 
 		$this->arrParams = $params;
-
+				
+		//some small hack
+		GlobalsProviderUC::$lastWidgetParams = $params;	
+		
 	}
 
 	/**

@@ -519,6 +519,108 @@
 .widget-results{
     margin-top: 20px;
 }
+
+/* Equal row/column gutters for property results grid */
+.widget-results .properties.view-grid > .row-col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-left: 0;
+  margin-right: 0;
+}
+@media (min-width: 768px) {
+  .widget-results .properties.view-grid > .row-col {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.widget-results .properties.view-grid > .row-col > [class*="col-"] {
+  width: 100%;
+  max-width: none;
+  flex: none;
+  padding-left: 0;
+  padding-right: 0;
+  margin-bottom: 0;
+}
+.widget-results .properties.view-grid .immobilgolf-property {
+  padding-top: 0;
+  height: 100%;
+}
+.widget-results .properties.view-grid .property-card.card {
+  margin-bottom: 0 !important;
+  height: 100%;
+  background: #fff;
+}
+
+/* Properties pagination */
+.widget-results .immobilgolf-results-pagination,
+.widget-results .pagination.properties {
+  margin-top: 28px;
+  padding-top: 8px;
+}
+.widget-results ul.pagination,
+.widget-results ul.immobilgolf-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.widget-results ul.pagination > li,
+.widget-results ul.immobilgolf-pagination > li {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+}
+.widget-results ul.pagination > li > a,
+.widget-results ul.pagination > li > span,
+.widget-results ul.immobilgolf-pagination > li > a,
+.widget-results ul.immobilgolf-pagination > li > span,
+.widget-results .page-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(27, 61, 44, 0.25);
+  border-radius: 8px;
+  background: #fff;
+  color: #1B3D2C !important;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none !important;
+  box-shadow: none;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+}
+.widget-results ul.pagination > li > a:hover,
+.widget-results ul.immobilgolf-pagination > li > a:hover,
+.widget-results .page-link:hover {
+  background: #1B3D2C;
+  border-color: #1B3D2C;
+  color: #fff !important;
+}
+.widget-results ul.pagination > li.active > span,
+.widget-results ul.immobilgolf-pagination > li.active > span,
+.widget-results ul.pagination > li.active > a,
+.widget-results ul.immobilgolf-pagination > li.active > a {
+  background: #F18A1F;
+  border-color: #F18A1F;
+  color: #fff !important;
+  cursor: default;
+}
+.widget-results ul.pagination > li.page-next > a,
+.widget-results ul.pagination > li.page-prev > a,
+.widget-results ul.immobilgolf-pagination > li.page-next > a,
+.widget-results ul.immobilgolf-pagination > li.page-prev > a {
+  font-size: 20px;
+  font-weight: 500;
+}
+
 .result-side.h-side {
     display: flex;
     justify-content: space-between;
@@ -531,6 +633,23 @@
     font-weight: 600;
     margin: 0;
     display: inline-block;
+}
+.widget-results .result-side .float-left {
+    float: none;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.widget-results .result-side .h-side-additional {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: #fff !important;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
 }
 .widget-filter .form-group{
     margin-bottom: 20px;
@@ -786,6 +905,9 @@ span.badge-superficie i{
     border-radius: 15px;
     overflow: hidden;
 }
+.elementor-widget-mapfilter .ribbon-immobilgolf {
+    top: 0px;
+}
 .elementor-widget-mapfilter .widget_area, .elementor-widget-agenciesfilter .widget_area{
     background: #fff;
     border-radius: 15px;
@@ -811,4 +933,461 @@ span.badge-superficie i{
 }
 .mb-30{
   margin-bottom: 30px;
+}
+
+/* Register / Login Form */
+.immobilgolf-auth-form {
+  width: 100%;
+}
+.immobilgolf-auth-form__card {
+  background-color: #E3E3E3;
+  width: 100%;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 13px 29px 12px rgba(0, 0, 0, 0.5);
+}
+.immobilgolf-auth-form__tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid #ccc;
+}
+.immobilgolf-auth-form__tab {
+  appearance: none;
+  background: #d0d0d0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 8px 8px 0 0;
+  padding: 10px 16px;
+  margin-bottom: -1px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #888;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+.immobilgolf-auth-form__tab:hover {
+  color: #555;
+  background: #c4c4c4;
+}
+.immobilgolf-auth-form__tab.is-active {
+  color: #e26824;
+  background: #fff;
+  border-bottom-color: #e26824;
+}
+.immobilgolf-auth-form__panel {
+  display: none;
+}
+.immobilgolf-auth-form__panel.is-active {
+  display: block;
+}
+.immobilgolf-auth-form__form {
+  margin: 0;
+}
+.immobilgolf-auth-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -8px 12px;
+}
+.immobilgolf-auth-form__col {
+  width: 50%;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+.immobilgolf-auth-form__col--full {
+  width: 100%;
+}
+.immobilgolf-auth-form__control-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+.immobilgolf-auth-form__control-wrap--password input[type="password"],
+.immobilgolf-auth-form__control-wrap--password input[type="text"] {
+  padding-right: 46px;
+}
+.immobilgolf-auth-form__password-toggle {
+  position: absolute;
+  top: 23px;
+  right: 8px;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #666;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+}
+.immobilgolf-auth-form__password-toggle:hover {
+  color: #222;
+  background: rgba(0, 0, 0, 0.04);
+}
+.immobilgolf-auth-form__password-toggle:focus {
+  outline: 2px solid #e26824;
+  outline-offset: 1px;
+}
+.immobilgolf-auth-form__password-toggle-icon {
+  display: inline-flex;
+}
+.immobilgolf-auth-form__password-toggle-icon[hidden] {
+  display: none !important;
+}
+.immobilgolf-auth-form__control-wrap--checkbox {
+  width: 100%;
+  max-width: 520px;
+}
+.immobilgolf-auth-form__not-valid-tip {
+  color: #dc3232;
+  font-size: 13px;
+  font-weight: normal;
+  display: block;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+.immobilgolf-auth-form input.is-not-valid,
+.immobilgolf-auth-form select.is-not-valid {
+  border-color: #dc3232 !important;
+}
+.immobilgolf-auth-form__form.is-invalid .immobilgolf-auth-form__message.is-error {
+  border: 2px solid #ffb900;
+  background: transparent;
+  color: #333;
+}
+.immobilgolf-auth-form__hp {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.immobilgolf-auth-form input[type="text"],
+.immobilgolf-auth-form input[type="email"],
+.immobilgolf-auth-form input[type="tel"],
+.immobilgolf-auth-form input[type="password"],
+.immobilgolf-auth-form select {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 12px 14px;
+  color: #333;
+  font-size: 15px;
+  line-height: 1.4;
+  box-shadow: none;
+  outline: none;
+  text-transform: none !important;
+}
+.immobilgolf-auth-form input::placeholder {
+  color: #9a9a9a;
+}
+.immobilgolf-auth-form select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23999' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+  color: #9a9a9a;
+}
+.immobilgolf-auth-form__heading {
+  display: block;
+  font-size: 15px;
+  text-align: center;
+  width: 100%;
+  margin: 8px auto 4px;
+  color: #e26824;
+  font-weight: 800;
+  line-height: 1.4;
+}
+.immobilgolf-auth-form__footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  margin-top: 10px;
+}
+.immobilgolf-auth-form__privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 520px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+}
+.immobilgolf-auth-form__privacy > input[type="checkbox"] {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: static !important;
+  appearance: auto !important;
+  -webkit-appearance: checkbox !important;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  margin: 3px 0 0 0 !important;
+  padding: 0 !important;
+  flex: 0 0 16px;
+  cursor: pointer;
+  accent-color: #e26824;
+  background: #fff !important;
+  border: 1px solid #bbb !important;
+  box-shadow: none !important;
+}
+.immobilgolf-auth-form__privacy-text {
+  flex: 1 1 auto;
+}
+.immobilgolf-auth-form__privacy a {
+  color: #e26824;
+  font-weight: 700;
+  text-decoration: none;
+}
+.immobilgolf-auth-form__remember {
+  align-self: flex-start;
+  max-width: none;
+}
+.immobilgolf-auth-form__remember > input[type="checkbox"] {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: static !important;
+  appearance: auto !important;
+  -webkit-appearance: checkbox !important;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  margin: 3px 0 0 0 !important;
+  flex: 0 0 16px;
+  accent-color: #e26824;
+}
+.immobilgolf-auth-form__submit {
+  display: inline-block;
+  color: #ffffff !important;
+  background-color: #4b4b4b;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 48px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin-top: 4px;
+  text-decoration: none;
+}
+.immobilgolf-auth-form__submit:hover {
+  background-color: #000000;
+  color: #ffffff !important;
+}
+.immobilgolf-auth-form__submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+.immobilgolf-auth-form__submit.is-loading {
+  position: relative;
+  color: transparent !important;
+}
+.immobilgolf-auth-form__submit.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: ig-spin .7s linear infinite;
+}
+
+/* Licenses iframe modal */
+.immobilgolf-auth-licenses-modal[hidden] {
+  display: none !important;
+}
+.immobilgolf-auth-licenses-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+.immobilgolf-auth-licenses-modal.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.immobilgolf-auth-licenses-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+.immobilgolf-auth-licenses-modal.is-open .immobilgolf-auth-licenses-modal__backdrop {
+  opacity: 1;
+}
+.immobilgolf-auth-licenses-modal__dialog {
+  position: relative;
+  z-index: 1;
+  width: min(720px, 100%);
+  height: min(640px, calc(100vh - 40px));
+  max-height: calc(100vh - 40px);
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(18px) scale(0.96);
+  transition:
+    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.immobilgolf-auth-licenses-modal.is-open .immobilgolf-auth-licenses-modal__dialog {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.immobilgolf-auth-licenses-modal__close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,.08);
+  color: #333;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+.immobilgolf-auth-licenses-modal__close:hover {
+  background: rgba(0,0,0,.15);
+  transform: scale(1.06);
+}
+.immobilgolf-auth-licenses-modal__iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  border: 0;
+  background: #fff;
+}
+body.immobilgolf-auth-licenses-open {
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .immobilgolf-auth-licenses-modal,
+  .immobilgolf-auth-licenses-modal__backdrop,
+  .immobilgolf-auth-licenses-modal__dialog,
+  .immobilgolf-auth-licenses-modal__close {
+    transition: none !important;
+  }
+}
+
+.immobilgolf-auth-form__message {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+}
+.immobilgolf-auth-form__message.is-success {
+  background: #e8f6ec;
+  color: #1e7a3a;
+}
+.immobilgolf-auth-form__message.is-error {
+  background: #fdecea;
+  color: #b42318;
+}
+.immobilgolf-auth-form__logged {
+  text-align: center;
+}
+.immobilgolf-auth-form__logged-hello {
+  margin: 0 0 20px;
+  color: #333;
+  font-size: 16px;
+}
+.immobilgolf-auth-form__logged-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+.immobilgolf-auth-form__submit--outline {
+  background-color: transparent !important;
+  color: #4b4b4b !important;
+  border: 2px solid #4b4b4b !important;
+}
+.immobilgolf-auth-form__submit--outline:hover {
+  background-color: #4b4b4b !important;
+  color: #fff !important;
+}
+.immobilgolf-auth-form__logged p {
+  margin: 0 0 16px;
+  color: #333;
+}
+/* Loading spinner */
+.immobilgolf-auth-form__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+}
+.immobilgolf-auth-form__spinner {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(0,0,0,.12);
+  border-top-color: #4b4b4b;
+  border-radius: 50%;
+  animation: ig-spin .7s linear infinite;
+}
+@keyframes ig-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 767px) {
+  .immobilgolf-auth-form__row {
+    margin: 0 0 14px;
+  }
+  .immobilgolf-auth-form__col {
+    width: 100%;
+    padding: 0;
+  }
+  .immobilgolf-auth-form__col + .immobilgolf-auth-form__col {
+    margin-top: 14px;
+  }
+  .immobilgolf-auth-form__card {
+    padding: 20px;
+  }
+  .immobilgolf-auth-form__heading {
+    margin: 6px 0 4px;
+  }
 }

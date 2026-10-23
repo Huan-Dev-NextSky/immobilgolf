@@ -3,13 +3,29 @@
 /**
  * Upsell notice class.
  *
- * @since 4.14.17
+ * @since      4.14.17
+ * @deprecated 6.9.8 Use TEC\Common\Admin\Conditional_Content\Promotional_Content_Abstract with appropriate traits instead.
  *
  * @package Tribe\Admin\Upsell_Notice
  */
 
 namespace Tribe\Admin\Upsell_Notice;
 
+defined( 'ABSPATH' ) || exit;
+
+_deprecated_file( __FILE__, '6.9.8', '\TEC\Common\Admin\Conditional_Content\Promotional_Content_Abstract with appropriate traits' );
+
+/**
+ * Upsell notice class.
+ *
+ * @since      4.14.17
+ * @deprecated 6.9.8 Use TEC\Common\Admin\Conditional_Content\Promotional_Content_Abstract with appropriate traits instead.
+ *
+ * @see        \TEC\Common\Admin\Conditional_Content\Promotional_Content_Abstract
+ * @see        \TEC\Common\Admin\Conditional_Content\README.md
+ *
+ * @package Tribe\Admin\Upsell_Notice
+ */
 class Main {
 
 	/**
@@ -42,7 +58,7 @@ class Main {
 
 	/**
 	 * Checks if upsell should be rendered.
-	 * 
+	 *
 	 * @since 4.14.17
 	 *
 	 * @return boolean
@@ -59,7 +75,7 @@ class Main {
 
 	 /**
 	  * Render upsell notice.
-	  * 
+	  *
 	  * @since 4.14.17
 	  *
 	  * @param array  $args Array of arguments that will ultimately be sent to the template.

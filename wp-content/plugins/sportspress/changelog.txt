@@ -1,5 +1,19 @@
 == SportsPress Changelog ==
 
+= 2.7.31 =
+* Fix - WordPress 7.0 compatibility.
+
+= 2.7.30 =
+* Fix - Security issues.
+* Fix - Deprecated preg_replace() null parameter warning in league table admin columns.
+
+= 2.7.29 =
+* Fix - Error when extensions add null values.
+* Fix - Non-numeric metrics being converted to numeric values.
+
+= 2.7.27 =
+* Fix - Security issues.
+
 = 2.7.26 =
 * Tweak - Make SportsPress compatible with the Polylang plugin.
 * Fix - Non-numeric value error in player list.

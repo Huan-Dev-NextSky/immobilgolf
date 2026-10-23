@@ -471,7 +471,7 @@ class SB_Instagram_Feed
 	 * @since 2.0/5.0
 	 * @since 2.0/5.1.2 if backup feed data used, header data also set from backup
 	 */
-	public function maybe_set_post_data_from_backup()
+	public function maybe_set_post_data_from_backup($record_stale_serve = true)
 	{
 		$backup_data = $this->cache->get('posts_backup');
 
@@ -488,6 +488,13 @@ class SB_Instagram_Feed
 			}
 
 			$this->maybe_set_header_data_from_backup();
+
+			// The feed is being served stale — record it so the staleness
+			// notice can escalate if this keeps happening (SMASH-1808).
+			// Callers serving backup BY DESIGN pass false.
+			if ($record_stale_serve) {
+				\InstagramFeed\BackupCacheMonitor::record_backup_serve($this->cache->get_feed_id());
+			}
 
 			return true;
 		} else {
@@ -909,6 +916,10 @@ class SB_Instagram_Feed
 	protected function filter_posts($post_set, $settings = array())
 	{
 		// array_unique( $post_set, SORT_REGULAR);
+
+		// SMASH-1105: strip Instagram Trial Reels (posts with is_shared_to_feed: false)
+		// before any other filtering so they're never shown regardless of media/video settings.
+		$post_set = SB_Instagram_Parse::filter_out_trial_reels($post_set);
 
 		if ($settings['media'] === 'all') {
 			return $post_set;
@@ -1337,6 +1348,14 @@ class SB_Instagram_Feed
 
 			$this->cache->update_or_insert('posts', sbi_json_encode($to_cache));
 
+			// Fresh content committed — the feed is healthy again. Deliberately
+			// independent of $save_backup so recovery is detected with backup
+			// caching disabled; should_use_backup() is true on error-cache
+			// writes (empty post data), which must not clear the state.
+			if (!$this->should_use_backup()) {
+				\InstagramFeed\BackupCacheMonitor::record_fresh_content($this->cache->get_feed_id());
+			}
+
 			if ($save_backup) {
 				if (isset($to_cache['errors'])) {
 					unset($to_cache['errors']);
@@ -1423,6 +1442,10 @@ class SB_Instagram_Feed
 			}
 
 			$this->cache->update_or_insert('posts', sbi_json_encode($to_cache));
+
+			if (!$this->should_use_backup() && (!empty($this->post_data) || !empty($to_cache['data']))) {
+				\InstagramFeed\BackupCacheMonitor::record_fresh_content($this->cache->get_feed_id());
+			}
 
 			if ($save_backup && (!empty($this->post_data) || !empty($this->next_pages) || !empty($to_cache['data']))) {
 				if (isset($to_cache['errors'])) {
@@ -1535,7 +1558,14 @@ class SB_Instagram_Feed
 
 
 		$other_atts .= ' data-postid="' . esc_attr(get_the_ID()) . '"';
-		$other_atts .= ' data-locatornonce="' . esc_attr(wp_create_nonce('sbi-locator-nonce-' . get_the_ID() . '-' . $this->regular_feed_transient_name)) . '"';
+		// Page caches serve logged-out HTML, so only that gets the non-expiring token.
+		// A logged-in render (e.g. a draft preview) keeps the user-bound, expiring nonce.
+		if (is_user_logged_in()) {
+			$locator_token = wp_create_nonce('sbi-locator-nonce-' . get_the_ID() . '-' . $this->regular_feed_transient_name);
+		} else {
+			$locator_token = sbi_create_locator_token(get_the_ID(), $this->regular_feed_transient_name);
+		}
+		$other_atts .= ' data-locatornonce="' . esc_attr($locator_token) . '"';
 		if (! empty($settings['imageaspectratio'])) {
 			$other_atts .= ' data-imageaspectratio="' . esc_attr($settings['imageaspectratio']) . '"';
 		}
@@ -1604,8 +1634,8 @@ class SB_Instagram_Feed
 		$error_message_return = array(
 			'error_message' => __('Error: No posts found.', 'instagram-feed'),
 			'admin_only' => __('Make sure this account has posts available on instagram.com.', 'instagram-feed'),
-			'frontend_directions' => '<a href="https://smashballoon.com/instagram-feed/docs/errors/">' . __('Click here to troubleshoot', 'instagram-feed') . '</a>',
-			'backend_directions' => '<a href="https://smashballoon.com/instagram-feed/docs/errors/">' . __('Click here to troubleshoot', 'instagram-feed') . '</a>'
+			'frontend_directions' => '<a href="https://smashballoon.com/instagram-feed/docs/errors/?utm_campaign=instagram-free&utm_source=error-message&utm_medium=docs">' . __('Click here to troubleshoot', 'instagram-feed') . '</a>',
+			'backend_directions' => '<a href="https://smashballoon.com/instagram-feed/docs/errors/?utm_campaign=instagram-free&utm_source=error-message&utm_medium=docs">' . __('Click here to troubleshoot', 'instagram-feed') . '</a>'
 		);
 		$sb_instagram_posts_manager->maybe_set_display_error('configuration', $error_message_return);
 	}

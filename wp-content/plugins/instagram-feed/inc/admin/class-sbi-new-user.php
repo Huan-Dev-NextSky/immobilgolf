@@ -69,7 +69,9 @@ class SBI_New_User extends SBI_Notifications
 			}
 		}
 
-		$notification = $this->verify(array($notification));
+		$notification = class_exists( '\InstagramFeed\Vendor\Smashballoon\Framework\Packages\Consent\ConsentNotifications' )
+			? \InstagramFeed\Vendor\Smashballoon\Framework\Packages\Consent\ConsentNotifications::verify( array( $notification ) )
+			: array( $notification );
 
 		update_option(
 			$this->option_name(),
@@ -252,7 +254,7 @@ class SBI_New_User extends SBI_Notifications
 
 			switch ($type) {
 				case 'review':
-					$sbi_open_feedback_url = 'https://smashballoon.com/feedback/?plugin=instagram-free';
+					$sbi_open_feedback_url = 'https://smashballoon.com/feedback/?plugin=instagram-free&utm_campaign=instagram-free&utm_source=new-user&utm_medium=feedback';
 					// step 1 for the review notice.
 					if (!$review_consent) {
 						$error_args = array(
@@ -383,11 +385,20 @@ class SBI_New_User extends SBI_Notifications
 			return array();
 		}
 
+		// SMASH-1245: mirror the consent gate from update(). When the remote source
+		// is withheld (Free without consent), update() early-returns without ever
+		// writing $option['update'], so an unguarded "empty($option['update'])"
+		// re-fired update() — and notification_source() — on every admin page load.
+		// Only attempt the fetch when the source is remote, then re-read the option
+		// so a freshly-fetched feed renders immediately.
+		$source = class_exists( 'SBI_Consent' ) ? \SBI_Consent::notification_source() : 'remote';
+
 		$option = $this->get_option();
 
 		// Only update if does not exist.
-		if (empty($option['update'])) {
+		if ('remote' === $source && empty($option['update'])) {
 			$this->update();
+			$option = $this->get_option(false);
 		}
 
 		$events = !empty($option['events']) ? $this->verify_active($option['events']) : array();
@@ -403,6 +414,16 @@ class SBI_New_User extends SBI_Notifications
 	 */
 	public function update()
 	{
+		// SMASH-1245: gate remote new-user feed fetch on consent. notification_source()
+		// reflects the per-edition default (Pro on by default, Free off until opt-in),
+		// so the remote request only fires once the user has consented. Guard on the
+		// SBI_Consent alias to stay consistent with get() and the parent
+		// SBI_Notifications::update().
+		$source = class_exists( 'SBI_Consent' ) ? \SBI_Consent::notification_source() : 'remote';
+		if ( 'remote' !== $source ) {
+			return;
+		}
+
 		$feed = $this->fetch_feed();
 		$option = $this->get_option();
 
@@ -535,9 +556,7 @@ class SBI_New_User extends SBI_Notifications
 	/**
 	 * SBI Get Notice Title depending on the notice type
 	 *
-	 * @param array $notification
-	 *
-	 * @return string $title
+	 * @return void
 	 * @since 6.0
 	 */
 	public function dismiss()
@@ -551,6 +570,7 @@ class SBI_New_User extends SBI_Notifications
 		$discount_notice = $sbi_notices->get_notice('discount');
 		if ($discount_notice && !isset($sbi_statuses_option['preexisting_discount_notice_check'])) {
 			update_user_meta($user_id, 'sbi_ignore_new_user_sale_notice', 'always');
+			update_user_meta($user_id, 'sb_notice_discount_dismissed', true);
 			$sbi_notices->remove_notice('discount');
 		}
 		$sbi_statuses_option['preexisting_discount_notice_check'] = true;
@@ -586,6 +606,7 @@ class SBI_New_User extends SBI_Notifications
 			update_option('sbi_statuses', $sbi_statuses_option, false);
 
 			update_user_meta($user_id, 'sbi_ignore_new_user_sale_notice', 'always');
+			update_user_meta($user_id, 'sb_notice_discount_dismissed', true);
 		}
 
 		if (isset($_GET['sbi_ignore_rating_notice_nag'])) {
@@ -617,6 +638,7 @@ class SBI_New_User extends SBI_Notifications
 			}
 			if ('always' === $new_user_ignore) {
 				update_user_meta($user_id, 'sbi_ignore_new_user_sale_notice', 'always');
+				update_user_meta($user_id, 'sb_notice_discount_dismissed', true);
 
 				$current_month_number = (int)date('n', sbi_get_current_time());
 				$not_early_in_the_year = ($current_month_number > 5);
@@ -639,9 +661,12 @@ class SBI_New_User extends SBI_Notifications
 			} elseif (date('Y', sbi_get_current_time()) === $bfcm_ignore) {
 				update_user_meta($user_id, 'sbi_ignore_bfcm_sale_notice', date('Y', sbi_get_current_time()));
 			}
-			update_user_meta($user_id, 'sbi_ignore_new_user_sale_notice', 'always');
+			if ($bfcm_ignore) {
+				update_user_meta($user_id, 'sbi_ignore_new_user_sale_notice', 'always');
+				update_user_meta($user_id, 'sb_notice_discount_dismissed', true);
 
-			$sbi_notices->remove_notice('discount');
+				$sbi_notices->remove_notice('discount');
+			}
 		}
 
 		if (isset($_GET['sbi_dismiss'])) {
@@ -655,6 +680,7 @@ class SBI_New_User extends SBI_Notifications
 				update_option('sbi_statuses', $sbi_statuses_option, false);
 
 				update_user_meta($user_id, 'sbi_ignore_new_user_sale_notice', 'always');
+				update_user_meta($user_id, 'sb_notice_discount_dismissed', true);
 
 				$sbi_notices->remove_notice('review_step_1');
 				$sbi_notices->remove_notice('review_step_1_all_pages');
@@ -662,6 +688,7 @@ class SBI_New_User extends SBI_Notifications
 				$sbi_notices->remove_notice('review_step_2_all_pages');
 			} elseif ('discount' === $notice_dismiss) {
 				update_user_meta($user_id, 'sbi_ignore_new_user_sale_notice', 'always');
+				update_user_meta($user_id, 'sb_notice_discount_dismissed', true);
 
 				$current_month_number = (int)date('n', sbi_get_current_time());
 				$not_early_in_the_year = ($current_month_number > 5);
@@ -669,8 +696,6 @@ class SBI_New_User extends SBI_Notifications
 				if ($not_early_in_the_year) {
 					update_user_meta($user_id, 'sbi_ignore_bfcm_sale_notice', date('Y', sbi_get_current_time()));
 				}
-
-				update_user_meta($user_id, 'sbi_ignore_new_user_sale_notice', 'always');
 
 				$sbi_notices->remove_notice('discount');
 			}

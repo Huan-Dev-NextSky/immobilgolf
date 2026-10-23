@@ -1,0 +1,209 @@
+@charset 'UTF-8';
+
+/*------------------------------------------------------------------
+[Media Stylesheet]
+-------------------------------------------------------------------*/
+
+/*------------------------------------------------------------------
+[Table of contents]
+
+1. Min width 992px and Max width: 1199px
+2. Max width: 1140px 
+3. Max width: 992px
+4. Max width: 992px and min width: 768px
+5. Max width: 767px
+6. Max width: 480px
+7. Custom media for IE
+
+-------------------------------------------------------------------*/
+
+@media (min-width: 1380px) {
+
+}
+
+@media (min-width: 1140px) and (max-width: 1350px) {
+
+}
+
+/*------------------------------------------------------------------
+[1. Min width 992px and Max width: 1199px ]
+*/
+
+@media (min-width: 992px) and (max-width: 1199px) {
+
+}
+
+/*------------------------------------------------------------------
+[2. Max width: 1140px ]
+*/
+@media (max-width: 1140px) {
+}
+
+/*------------------------------------------------------------------
+[3. Max width: 991px ]
+*/
+@media (max-width: 991px) {
+    #search-right-side .search-additional-btn-c {
+        margin-top: 25px;
+    }
+   
+    #search-right-side .form-addittional  {
+        padding-top: 15px;
+    }
+    
+    body > div.container-side-version .search-form {
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+    
+    .content-flex .search-form .search-title {
+        padding-bottom: 40px;
+    }
+    
+    .container-side-version .main  .container {
+        padding: 0;
+    }
+}
+
+/*------------------------------------------------------------------
+[4. Max width: 992px and min width: 768px]
+*/
+
+@media (min-width: 768px) and (max-width: 991px) {
+
+}
+
+/*------------------------------------------------------------------
+[5. Max width: 767px]
+*/
+@media (max-width: 767px) {
+    
+    .property-slider .object-fit-container  {
+        height: 300px;
+    }
+    
+    body {
+        overflow-x: hidden;
+    }
+    
+    .main-container {
+        padding: 40px 0;
+    }
+    
+    body > div:not(.container-side-version) .h-side {
+        padding-bottom: 20px;
+    }
+    
+    body > div:not(.container-side-version) .text-center > .pagination {
+        margin-bottom: 15px;
+    }
+    
+    .top-title,
+    .top-title-widget,
+    .search-form,
+    .section {
+        padding-bottom: 40px;
+        padding-top: 40px;
+    }
+    
+    .section.page-body {
+        padding-top: 40px;
+        padding-bottom: 20px;
+    }
+    
+    .section.page-body .container>.row>div {
+        margin-bottom: 15px;
+    }
+    
+    .section-title {
+        margin-bottom: 30px;
+    }
+    
+    .footer .title,
+    .widget,
+    .sidebar .btn-property, .sidebar .widget,
+    .footer .footer-contant,
+    .footer .title {
+        margin-bottom: 40px;
+    }
+    
+    .footer .footer-bottom {
+        padding: 20px 0;
+    }
+    
+    body > div.container-side-version .h-side {
+        padding-top: 40px;
+    }
+    
+    body .footer .footer-mask {
+        padding-top: 50px;
+    }
+    
+    .header-slider .carousel .carousel-inner .carousel-item {
+        height: 300px;
+    }
+    
+    .content-flex .search-form .search-title {
+        padding-bottom: 20px;
+    }
+    
+    body > div.container-side-version .search-form {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    
+    body > div.container-side-version .pagination {
+        margin-top: 10px;
+    }
+    
+    .properties {
+        padding-bottom: 20px;
+    }
+    
+    body > div.container-side-version .pagination {
+        margin-top: 0;
+        padding-bottom: 20px;
+        margin-bottom: 0;
+    }
+    
+    .widget-overflow {
+        margin-top: 0;
+    }
+    
+    .top-title-widget .breadcrumb {
+        margin-bottom: 20px;
+    }
+    
+    #main-map {
+        height: 400px !important;
+    }
+    
+    .page-title-big {
+        margin-top: 20px;
+    }
+    
+}
+
+/*------------------------------------------------------------------
+[6. Max width: 540px]
+*/
+
+@media (max-width:540px) {
+    
+.property-slider .object-fit-container  {
+    height: 300px;
+}
+}
+
+/*------------------------------------------------------------------
+[7. Custom media for IE]
+*/
+
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+}
+
+@media screen and (max-width:1140px) and (-ms-high-contrast: active) and (-ms-high-contrast: none) {
+}
+
+@media screen and (max-width:768px) and (-ms-high-contrast: active) and (-ms-high-contrast: none) {
+}

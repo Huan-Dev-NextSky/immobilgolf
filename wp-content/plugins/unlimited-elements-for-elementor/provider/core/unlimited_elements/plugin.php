@@ -5,6 +5,8 @@
  * @copyright Copyright (c) 2017 UniteCMS
  * @license http://www.gnu.org/licenses/gpl-2.0.html GNU/GPLv2 or later
 */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 
 //no direct accees
 defined ('UNLIMITED_ELEMENTS_INC') or die ('restricted aceess');
@@ -68,7 +70,7 @@ class UnlimitedElementsPluginUC extends UniteCreatorPluginBase{
 		
 		$mainFilepath = GlobalsUC::$pathPlugin."unlimited_elements.php";
 						
-		new UniteProviderCoreFrontUC_Elementor($mainFilepath);
+		new UELM_ProviderCoreFrontUC_Elementor($mainFilepath);
 		
 	}
 	

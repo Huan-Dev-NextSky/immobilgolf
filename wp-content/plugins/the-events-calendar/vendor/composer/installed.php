@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'the-events-calendar/the-events-calendar',
-        'pretty_version' => 'dev-release/T25.hawkeye.1',
-        'version' => 'dev-release/T25.hawkeye.1',
-        'reference' => '349270e08864bdc169e9a0dc9fc9227692f0324f',
+        'pretty_version' => 'dev-release/P26.rsvp-merge',
+        'version' => 'dev-release/P26.rsvp-merge',
+        'reference' => 'a272bd49daf0f25b992010fc8c891133b10e39eb',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         'the-events-calendar/the-events-calendar' => array(
-            'pretty_version' => 'dev-release/T25.hawkeye.1',
-            'version' => 'dev-release/T25.hawkeye.1',
-            'reference' => '349270e08864bdc169e9a0dc9fc9227692f0324f',
+            'pretty_version' => 'dev-release/P26.rsvp-merge',
+            'version' => 'dev-release/P26.rsvp-merge',
+            'reference' => 'a272bd49daf0f25b992010fc8c891133b10e39eb',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

@@ -1,6 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) exit;
 
-function wpmlAutoTranslationTest(){
+function uelm_wpmlAutoTranslationTest(){
 	
 	if(UniteCreatorWpmlIntegrate::isWpmlExists() == false && GlobalsUC::$inDev == false){
 		
@@ -8,6 +9,7 @@ function wpmlAutoTranslationTest(){
 		return(false);
 	}
 	
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 	$arrWidgets = apply_filters("wpml_elementor_widgets_to_translate",array());
 	
 	dmp("Those widgets are selected for the wpml auto translate:");
@@ -28,7 +30,6 @@ function wpmlAutoTranslationTest(){
 		$widgetName = str_replace("ucaddon_","",$name)."_elementor";
 		
 		$arrItemsFields = UniteFunctionsUC::getVal(UniteCreatorWpmlIntegrate::$arrWidgetItemsData, $widgetName);
-
 		
 		dmp("items fields: ");
 		dmp($arrItemsFields);
@@ -38,4 +39,4 @@ function wpmlAutoTranslationTest(){
 	
 }
 
-wpmlAutoTranslationTest();
+uelm_wpmlAutoTranslationTest();

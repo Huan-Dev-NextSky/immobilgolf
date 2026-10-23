@@ -1,8 +1,8 @@
 === Head, Footer and Post Injections ===
 Tags: header, footer, ads, analytics, amp
-Tested up to: 6.7.2
-Stable tag: 3.3.2
-Donate link: https://www.satollo.net/donations
+Tested up to: 6.9
+Stable tag: 3.3.6
+Donate link: https://www.paypal.com/donate/?hosted_button_id=5PHGDGNHAYLJ8
 Contributors: satollo
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -61,6 +61,7 @@ Official page: [Header and Footer](https://www.satollo.net/plugins/header-footer
 
 Other plugins by Stefano Lissa:
 
+* [Monitor](https://www.satollo.net/plugins/monitor)
 * [Hyper Cache](https://www.satollo.net/plugins/hyper-cache)
 * [Newsletter](https://www.thenewsletterplugin.com)
 * [Include Me](https://www.satollo.net/plugins/include-me)
@@ -71,18 +72,31 @@ Other plugins by Stefano Lissa:
 
 You can contribute to translate this plugin in your language on [WordPress Translate](https://translate.wordpress.org)
 
-== Installation ==
-
-1. Put the plugin folder into [wordpress_dir]/wp-content/plugins/
-2. Go into the WordPress admin interface and activate the plugin
-3. Optional: go to the options page and configure the plugin
-
 == Frequently Asked Questions ==
 
-FAQs are answered on [Header and Footer](http://www.satollo.net/plugins/header-footer) page.
-
+FAQs are answered on [Header and Footer](https://www.satollo.net/plugins/header-footer) page.
 
 == Changelog ==
+
+= 3.3.6 =
+
+* Version number fix
+
+= 3.3.5 =
+
+* Fixed not visible options on the admin side
+
+= 3.3.4 =
+
+* Improved the after "body" tag injection (Markus Sandelin)
+* Not completely removed the page buggering due to the possible use of "generic tags" (probably no one use)
+* Fixed a int conversion PHP warning
+* Started an admin page refresh
+
+= 3.3.3 =
+
+* WP 6.9 check
+* PCP Check
 
 = 3.3.1, 3.3.2 =
 
@@ -91,89 +105,6 @@ Breaking changes (see below)
 * Disabled by default PHP on multisite installations
 * Added constant HEADER_FOOTER_MULTISITE_ALLOW_PHP to be used on wp-config.php to enable PHP on multisite installations
 * Added constant HEADER_FOOTER_ALLOW_PHP to be used on wp-config.php to enable PHP (true by default for compatibility)
-
-= 3.3.0 =
-
-* Fixed readme
-
-= 3.2.9 =
-
-* WP 6.7.1 check
-
-= 3.2.8 =
-
-* WP 6.5.2 check
-
-= 3.2.7 =
-
-* Added Custom Post Types
-
-= 3.2.6 =
-
-* Fixed PHP short open tag
-
-= 3.2.5 =
-
-* Removed obsolete code
-* Escaped added to fixed and translated strings
-
-= 3.2.4 =
-
-* Possible security fix
-
-= 3.2.3 =
-
-* Updated meta information
-
-= 3.2.2 =
-
-* Fixed a couple of links in readme.txt
-* Updated compatibility with WP 5.7
-
-= 3.2.1 =
-
-* Fixed a PHP notice on admin side when creating a new page
-
-= 3.2.0 =
-
-* Restored controls of per post injection
-* Compatibility check with latest WP
-* Moved to PHP 5.6 syntax
-
-= 3.1.6 =
-
-* Fixed check_admin_referrer action
-
-= 3.1.5 =
-
-* Fixed wrong injection in amp pages
-
-= 3.1.4 =
-
-* Performance optimization
-* Removed obsolete code
-* Improved AMP support
-* (Temporary) removed metaboxes (they were not working anyway)
-
-= 3.1.3 =
-
-* General compatibility check with latest WP
-
-= 3.1.2 =
-
-* Fixed a debug notice
-
-= 3.1.1 =
-
-* Privacy section in the readme.txt
-
-= 3.1.0 =
-
-* Removed the Facebook setting (move to a specialized plugin to have the Facebook Open Graph Meta)
-* Removed bbPress setting (please use bbpress ads)
-* Label fix
-* Removed notices
-* 5 post injections and 5 generic injections
 
 == Privacy and GDPR ==
 

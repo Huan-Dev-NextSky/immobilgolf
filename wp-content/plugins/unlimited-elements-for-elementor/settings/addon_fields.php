@@ -7,14 +7,14 @@
  * */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-		$filepathAddonSettings = GlobalsUC::$pathSettings."addon_fields.xml";
-		
-		UniteFunctionsUC::validateFilepath($filepathAddonSettings);
-		
-		$generalSettings = new UniteCreatorSettings();
-		
-		if(isset($this->objAddon)){
-			$generalSettings->setCurrentAddon($this->objAddon);
-		}
-		
-		$generalSettings->loadXMLFile($filepathAddonSettings);
+$uelm_filepathAddonSettings = GlobalsUC::$pathSettings."addon_fields.xml";
+
+UniteFunctionsUC::validateFilepath($uelm_filepathAddonSettings);
+
+$uelm_generalSettings = new UniteCreatorSettings();
+
+if(isset($this->objAddon)){
+    $uelm_generalSettings->setCurrentAddon($this->objAddon);
+}
+
+$uelm_generalSettings->loadXMLFile($uelm_filepathAddonSettings);

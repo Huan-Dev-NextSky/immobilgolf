@@ -1,8 +1,9 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 defined('UNLIMITED_ELEMENTS_INC') or die;
 
-class UniteCreatorLayoutsViewProvider extends UniteCreatorLayoutsView{
+class UELM_CreatorLayoutsViewProvider extends UELM_CreatorLayoutsView{
 
 	/**
 	 * display blocking text
@@ -36,3 +37,5 @@ class UniteCreatorLayoutsViewProvider extends UniteCreatorLayoutsView{
 	}
 		
 }
+
+class_alias( UELM_CreatorLayoutsViewProvider::class, 'UniteCreatorLayoutsViewProvider' );

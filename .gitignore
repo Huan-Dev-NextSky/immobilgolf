@@ -1,0 +1,17 @@
+# Credentials & local config
+deploy.env
+.vscode/sftp.json
+
+# WordPress runtime data
+wp-config.php
+wp-content/uploads/
+wp-content/cache/
+wp-content/backups-dup-lite/
+wp-content/upgrade/
+wp-content/upgrade-temp-backup/
+portal/files/
+portal/application/logs/
+
+# OS / editor
+.DS_Store
+*.log

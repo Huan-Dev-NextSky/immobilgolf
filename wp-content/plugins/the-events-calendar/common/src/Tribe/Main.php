@@ -1,11 +1,12 @@
 <?php
 
 use TEC\Common\Libraries;
+use TEC\Common\StellarWP\Assets\Asset as StellarWP_Asset;
+use TEC\Common\StellarWP\Assets\Config as Assets_Config;
 use TEC\Common\Translations_Loader;
 use Tribe\Admin\Settings;
 use Tribe\DB_Lock;
 use TEC\Common\Asset;
-use TEC\Common\StellarWP\Assets\Config as Assets_Config;
 use TEC\Common\Controller as Common_Controller;
 use TEC\Common\StellarWP\ContainerContract\ContainerInterface;
 
@@ -23,7 +24,7 @@ class Tribe__Main {
 	const OPTIONNAME        = 'tribe_events_calendar_options';
 	const OPTIONNAMENETWORK = 'tribe_events_calendar_network_options';
 	const FEED_URL          = 'https://theeventscalendar.com/feed/';
-	const VERSION           = '6.9.0.1';
+	const VERSION           = '6.13.0';
 
 	protected $plugin_context;
 	protected $plugin_context_class;
@@ -96,7 +97,19 @@ class Tribe__Main {
 		$this->parent_plugin_dir = trailingslashit( plugin_basename( $this->plugin_path ) );
 		$this->plugin_url  = plugins_url( $this->parent_plugin_dir === $this->plugin_dir ? $this->plugin_dir : $this->parent_plugin_dir );
 
-		$this->promoter_connector();
+		require_once $this->plugin_path . 'src/functions/time.php';
+		require_once $this->plugin_path . 'src/functions/utils.php';
+		require_once $this->plugin_path . 'src/functions/conditionals.php';
+		require_once $this->plugin_path . 'src/functions/transient.php';
+		require_once $this->plugin_path . 'src/functions/url.php';
+		require_once $this->plugin_path . 'src/functions/query.php';
+		require_once $this->plugin_path . 'src/functions/multibyte.php';
+		require_once $this->plugin_path . 'src/functions/files.php';
+		require_once $this->plugin_path . 'src/functions/template-tags/general.php';
+		require_once $this->plugin_path . 'src/functions/template-tags/date.php';
+		require_once $this->plugin_path . 'src/functions/template-tags/html.php';
+		require_once $this->plugin_path . 'src/functions/template-tags/post.php';
+		require_once $this->plugin_path . 'src/functions/template-tags/svg.php';
 
 		add_action( 'plugins_loaded', [ $this, 'plugins_loaded' ], -1 );
 		add_action( 'tribe_common_loaded', [ $this, 'tribe_common_app_store' ], 10 );
@@ -197,19 +210,6 @@ class Tribe__Main {
 	 * Initializes all required libraries.
 	 */
 	public function init_libraries() {
-		require_once $this->plugin_path . 'src/functions/time.php';
-		require_once $this->plugin_path . 'src/functions/utils.php';
-		require_once $this->plugin_path . 'src/functions/conditionals.php';
-		require_once $this->plugin_path . 'src/functions/transient.php';
-		require_once $this->plugin_path . 'src/functions/url.php';
-		require_once $this->plugin_path . 'src/functions/query.php';
-		require_once $this->plugin_path . 'src/functions/multibyte.php';
-		require_once $this->plugin_path . 'src/functions/files.php';
-		require_once $this->plugin_path . 'src/functions/template-tags/general.php';
-		require_once $this->plugin_path . 'src/functions/template-tags/date.php';
-		require_once $this->plugin_path . 'src/functions/template-tags/html.php';
-		require_once $this->plugin_path . 'src/functions/template-tags/post.php';
-
 		Tribe__Debug::instance();
 		tec_timed_option();
 
@@ -287,6 +287,17 @@ class Tribe__Main {
 				[ 'tec-ky-module', 'vendor/ky/ky.js', [], null, [ 'module' => true ] ],
 				[ 'tec-ky', 'vendor/ky/tec-ky.js', [ 'tec-ky-module' ], null, [ 'module' => true ] ],
 				[ 'tec-common-php-date-formatter', 'node_modules/php-date-formatter/js/php-date-formatter.js' ],
+			]
+		);
+
+		tec_asset(
+			$this,
+			'tec-user-agent',
+			'user-agent.js',
+			[],
+			'wp_enqueue_scripts',
+			[
+				'groups' => [ self::class ],
 			]
 		);
 
@@ -397,6 +408,12 @@ class Tribe__Main {
 				'conditionals' => [ tribe( Settings::class ), 'should_load_color_field_assets' ]
 			]
 		);
+
+		// Register the TEC API functions that will be accessible at `window.tec.common.tecApi`.
+		StellarWP_Asset::add( 'tec-api', 'tecApi.js' )
+			->add_to_group_path( self::class . '-packages' )
+			->add_to_group( 'tec-api' )
+			->register();
 
 		tribe( Tribe__Admin__Help_Page::class )->register_assets();
 	}
@@ -514,18 +531,6 @@ class Tribe__Main {
 
 		add_filter( 'body_class', [ $this, 'add_js_class' ] );
 		add_action( 'wp_footer', [ $this, 'toggle_js_class' ] );
-
-		add_action( 'init', [ $this, 'load_action_scheduler' ], - 99999 );
-	}
-
-	/**
-	 * Load the Action Scheduler library.
-	 *
-	 * @since TDB
-	 */
-	public function load_action_scheduler(): void {
-		// Load the Action Scheduler library.
-		require_once $this->plugin_path . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
 	}
 
 	/**
@@ -633,7 +638,29 @@ class Tribe__Main {
 
 		// Load textdomain from a custom folder or the plugin's language folder.
 		if ( file_exists( $file ) ) {
-			return load_plugin_textdomain( $domain, false, $plugin_rel_path );
+			/**
+			 * Starting from WordPress 6.7.1, the `load_plugin_textdomain` will reset the `$l10n` global variable.
+			 * WorPress 6.7.0 will not, though. Here we reset that var for back-compatibility with WordPress 6.7.0.
+			 */
+			if ( isset( $GLOBALS['l10n'][ $domain ] ) && $GLOBALS['l10n'][ $domain ] instanceof NOOP_Translations ) {
+				unset( $GLOBALS['l10n'][ $domain ] );
+			}
+
+			$loaded = load_plugin_textdomain( $domain, false, $plugin_rel_path );
+
+			/**
+			 * If an earlier call to get a translation for a string in this domain was fired (e.g., a call to `__()`),
+			 * then the text domain registry has cached a falsy value for this domain and locale to indicate no
+			 * translation file is available. Here we overwrite the value if it had been set, or set it if it had not.
+			 *
+			 * The `load_plugin_textdomain()` function will add the custom path to the registry, but will not invalidate
+			 * a previously set value.
+			 */
+			/** @var WP_Textdomain_Registry $wp_textdomain_registry */
+			global $wp_textdomain_registry;
+			$wp_textdomain_registry->set( $domain, $locale, dirname( $file ) );
+
+			return $loaded;
 		}
 
 		// If translation files are not found in the custom folder, then load textdomain from the plugin's language folder.
@@ -772,7 +799,8 @@ class Tribe__Main {
 		tribe_singleton( 'updater', 'TEC\Common\Updater' );
 		tribe_singleton( \TEC\Common\Storage\Timed_Option::class, \TEC\Common\Storage\Timed_Option::class );
 		tribe_singleton( 'settings.manager', 'Tribe__Settings_Manager' );
-		tribe_singleton( 'settings', 'Tribe__Settings', [ 'hook' ] );
+		tribe_singleton( 'settings', 'Tribe__Settings' );
+		tribe_singleton( 'Tribe__Settings', 'Tribe__Settings' );
 		tribe_singleton( 'ajax.dropdown', 'Tribe__Ajax__Dropdown', [ 'hook' ] );
 		tribe_singleton( 'assets', 'Tribe__Assets', [ 'hook' ] );
 		tribe_singleton( 'assets.pipeline', 'Tribe__Assets_Pipeline', [ 'hook' ] );
@@ -819,6 +847,7 @@ class Tribe__Main {
 		tribe_register_provider( \TEC\Common\QR\Controller::class );
 		tribe_singleton( ContainerInterface::class, tribe() );
 		tribe_register_provider( Libraries\Provider::class );
+		tribe_register_provider( TEC\Common\TrustedLogin\Controller::class );
 
 		// Load the new third-party integration system.
 		tribe_register_provider( TEC\Common\Integrations\Provider::class );
@@ -840,15 +869,12 @@ class Tribe__Main {
 	 *
 	 * @since 4.9.20
 	 *
+	 * @deprecated 6.10.1
+	 *
 	 * @return void  Internal method without any return.
 	 */
 	public function promoter_connector() {
-		tribe_singleton( 'promoter.connector', 'Tribe__Promoter__Connector' );
-
-		add_filter(
-			'determine_current_user',
-			tribe_callback( 'promoter.connector', 'authenticate_user_with_connector' )
-		);
+		_deprecated_function( __METHOD__, '6.10.1' );
 	}
 
 	/**

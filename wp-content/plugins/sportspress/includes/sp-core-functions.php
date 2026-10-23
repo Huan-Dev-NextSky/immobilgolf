@@ -7,7 +7,7 @@
  * @author      ThemeBoy
  * @category    Core
  * @package     SportsPress/Functions
- * @version   2.7.26
+ * @version   2.7.30
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -66,8 +66,10 @@ function sp_get_template_part( $slug, $name = '' ) {
  * @return void
  */
 function sp_get_template( $template_name, $args = array(), $template_path = '', $default_path = '' ) {
+
 	if ( $args && is_array( $args ) ) {
-		extract( $args );
+		// Prevent user-supplied arguments from overwriting existing variables.
+		extract( $args, EXTR_SKIP );
 	}
 
 	$located = sp_locate_template( $template_name, $template_path, $default_path );
@@ -100,6 +102,30 @@ function sp_get_template( $template_name, $args = array(), $template_path = '', 
  * @return string
  */
 function sp_locate_template( $template_name, $template_path = '', $default_path = '' ) {
+	// Sanitize template name to prevent directory traversal attacks
+	// First extract just the filename component, removing any directory paths
+	$template_name = basename( $template_name );
+
+	// Sanitize the filename to remove special characters and traversal attempts
+	$template_name = sanitize_file_name( $template_name );
+
+	// Additional security: ensure no path separators remain after sanitization
+	$template_name = str_replace( array( '/', '\\' ), '', $template_name );
+
+	// Prevent access to hidden files
+	$template_name = ltrim( $template_name, '.' );
+
+	// Sanitize path parameters if provided by user input (defense-in-depth)
+	if ( ! empty( $template_path ) ) {
+		// Validate that template_path doesn't contain directory traversal
+		$template_path = str_replace( array( '../', '..\\' ), '', $template_path );
+	}
+
+	if ( ! empty( $default_path ) ) {
+		// Validate that default_path doesn't contain directory traversal
+		$default_path = str_replace( array( '../', '..\\' ), '', $default_path );
+	}
+
 	if ( ! $template_path ) {
 		$template_path = SP()->template_path();
 	}
@@ -346,7 +372,7 @@ if ( ! function_exists( 'sp_array_map_recursive' ) ) {
 
 if ( ! function_exists( 'sp_array_value' ) ) {
 	function sp_array_value( $arr = array(), $key = 0, $default = null, $sanitize = false ) {
-		$value = ( isset( $arr[ $key ] ) ? $arr[ $key ] : $default );
+		$value = ( is_array( $arr ) && is_scalar( $key ) && isset( $arr[ $key ] ) ? $arr[ $key ] : $default );
 
 		if ( $sanitize ) :
 			if ( is_array( $value ) ) :
@@ -1755,7 +1781,7 @@ if ( ! function_exists( 'sp_get_next_event' ) ) {
 if ( ! function_exists( 'sp_taxonomy_field' ) ) {
 	function sp_taxonomy_field( $taxonomy = 'category', $post = null, $multiple = false, $trigger = false, $placeholder = null ) {
 		$obj = get_taxonomy( $taxonomy );
-		if ( $obj ) {
+		if ( $obj && $obj->public) {
 			$post_type = get_post_type( $post );
 			?>
 			<div class="<?php echo esc_attr( $post_type ); ?>-<?php echo esc_attr( $taxonomy ); ?>-field">

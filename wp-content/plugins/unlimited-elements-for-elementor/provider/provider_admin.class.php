@@ -302,7 +302,6 @@ class UniteProviderAdminUC extends UniteCreatorAdmin{
 	protected function addActionAjax($ajaxAction, $eventFunction){
 
 		$this->addAction('wp_ajax_' . GlobalsUC::PLUGIN_NAME . "_" . $ajaxAction, $eventFunction, true);
-		$this->addAction('wp_ajax_nopriv_' . GlobalsUC::PLUGIN_NAME . "_" . $ajaxAction, $eventFunction, true);
 	}
 
 	/**
@@ -363,10 +362,11 @@ class UniteProviderAdminUC extends UniteCreatorAdmin{
 	 */
 	protected function validateAdminPermissions(){
 		
-		if(UniteFunctionsWPUC::isAdminPermissions() == false){
-			echo "access denied, no admin permissions";
-
-			return (false);
+		if(current_user_can($this->capability) == false){
+			wp_die(
+				esc_html__("You do not have sufficient permissions to access this page.", "unlimited-elements-for-elementor"),
+				403
+			);
 		}
 	}
 
@@ -578,10 +578,14 @@ class UniteProviderAdminUC extends UniteCreatorAdmin{
 
 		$pathCurrentTheme = get_template_directory() . "/";
 
+		$dirAddons = apply_filters("uelm_path_theme_addons", GlobalsUC::DIR_THEME_ADDONS);
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 		$dirAddons = apply_filters("ue_path_theme_addons", GlobalsUC::DIR_THEME_ADDONS);
 
 		$pathAddons = $pathCurrentTheme . $dirAddons . "/";
 
+		$pathAddons = apply_filters("uelm_path_install_addons", $pathAddons);
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 		$pathAddons = apply_filters("ue_path_install_addons", $pathAddons);
 
 		$this->installAddonsFromPath($pathAddons);
@@ -652,7 +656,7 @@ class UniteProviderAdminUC extends UniteCreatorAdmin{
 
 		dmp("addons installed, redirecting...");
 
-		wp_redirect($urlRedirect);
+		wp_safe_redirect($urlRedirect);
 		
 		exit();
 	}
@@ -742,6 +746,7 @@ class UniteProviderAdminUC extends UniteCreatorAdmin{
 			wp_enqueue_style('wp-auth-check');
 			wp_enqueue_script('wp-auth-check');
 
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 			add_action('admin_print_footer_scripts', 'wp_auth_check_html', 5);
 			add_action('wp_print_footer_scripts', 'wp_auth_check_html', 5);
 		}
@@ -770,6 +775,7 @@ class UniteProviderAdminUC extends UniteCreatorAdmin{
 			if($superClear == true)
 				print_admin_styles();
 			else
+				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 				do_action("admin_print_styles");
 
 			//put admin scripts
@@ -794,7 +800,9 @@ class UniteProviderAdminUC extends UniteCreatorAdmin{
 		if($superClear == true)
 			print_footer_scripts();
 		else{
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 			do_action("admin_footer");
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 			do_action("admin_print_footer_scripts");
 		}
 		?>
@@ -905,7 +913,7 @@ class UniteProviderAdminUC extends UniteCreatorAdmin{
 		if($clientAction != "save_instagram_connect_data")
 			return (false);
 
-		if(!isset($_REQUEST["access_token"]))
+		if(!isset($_REQUEST["access_token"])) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only checks that the token is present, so Rank Math's OAuth handler can be removed. The value is not read.
 			return (false);
 
 		$arrKeys = UniteFunctionsWPUC::getAllWPActionKeys("admin_init");
@@ -954,6 +962,8 @@ class UniteProviderAdminUC extends UniteCreatorAdmin{
 
 		// run blank mode
 		if(GlobalsUC::$blankWindowMode == true){
+
+			$this->validateAdminPermissions();
 
 			$isSuperClear = UniteFunctionsUC::getGetVar("superclear", "", UniteFunctionsUC::SANITIZE_KEY);
 			$isSuperClear = UniteFunctionsUC::strToBool($isSuperClear);

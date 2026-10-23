@@ -160,7 +160,7 @@ class ProviderOperationsUC extends UCOperations{
 	 */
 	public function getTermsListForSelectFromData($data){
 
-		$limit = 10;
+		$limit = 60;
 		
 		$search = $this->getSearchFromData($data);
 		$taxonomy = UniteFunctionsUC::getVal($data, "taxonomy");
@@ -177,8 +177,6 @@ class ProviderOperationsUC extends UCOperations{
 		if(empty($taxonomy)){ 
 			
 			$taxonomy = get_taxonomies([], 'names');
-			
-
 		} 
 
 		$query["taxonomy"] = $taxonomy;
@@ -269,7 +267,7 @@ class ProviderOperationsUC extends UCOperations{
 	 */
 	public function getUsersListForSelectFromData($data){
 		
-		$limit = 50;
+		$limit = 60;
 		
 		$search = $this->getSearchFromData($data);
 
@@ -321,28 +319,32 @@ class ProviderOperationsUC extends UCOperations{
 
 		$arrPostTypes = array_keys($arrTypesAssoc);
 
-		$strPostTypes = implode("','", $arrPostTypes);
-		$strPostTypes = "'$strPostTypes'";
+		if(empty($arrPostTypes))
+			return(array());
 
 		//prepare query
 		$db = HelperUC::getDB();
 
-		$tablePosts = UniteProviderFunctionsUC::$tablePosts;
+		global $wpdb;
 
-		$search = $db->escape($search);
-
-		$where = "post_type in ($strPostTypes)";
-		$where .= " and post_status in ('publish','draft','private')";
+		$postTypePlaceholders = implode(",", array_fill(0, count($arrPostTypes), "%s"));
 
 		$isStartWord = (strlen($search) == 1);
 
-		$whereStartWord = $where." and post_title like '$search%'";
+		$likeStart = $wpdb->esc_like($search) . '%';
+		$likeContains = '%' . $wpdb->esc_like($search) . '%';
 
-		$whereRegular = $where." and post_title like '%$search%'";
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Post type list length varies, so replacements are passed as one array. Placeholders are %s only. The posts table is $wpdb->posts. Status values are fixed in the query.
+		$sqlStartWord = $wpdb->prepare(
+			"select * from {$wpdb->posts} where post_type in ($postTypePlaceholders) and post_status in ('publish','draft') and post_title like %s order by post_date desc limit %d",
+			array_merge($arrPostTypes, array($likeStart, $limit))
+		);
 
-		$sqlStartWord = "select * from $tablePosts where $whereStartWord order by post_date desc limit $limit";
-
-		$sql = "select * from $tablePosts where $whereRegular order by post_date desc limit $limit ";
+		$sql = $wpdb->prepare(
+			"select * from {$wpdb->posts} where post_type in ($postTypePlaceholders) and post_status in ('publish','draft') and post_title like %s order by post_date desc limit %d",
+			array_merge($arrPostTypes, array($likeContains, $limit))
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 		if($isStartWord == true){
 

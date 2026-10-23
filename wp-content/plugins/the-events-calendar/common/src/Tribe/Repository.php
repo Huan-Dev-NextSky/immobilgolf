@@ -1134,14 +1134,13 @@ abstract class Tribe__Repository
 	 * {@inheritdoc}
 	 */
 	public function by( $key, $value = null ) {
+		$call_args = func_get_args();
 		if ( $this->void_query || ( 'void_query' === $key && false !== $value ) ) {
 			$this->void_query = true;
 
 			// No point in doing more computations if the query is void.
 			return $this;
 		}
-
-		$call_args = func_get_args();
 
 		$this->current_filters[ $key ] = array_slice( $call_args, 1 );
 
@@ -1925,10 +1924,12 @@ abstract class Tribe__Repository
 				$args = $this->build_meta_query( $meta_key = $value, $meta_value = $arg_1, '<=', $format = $arg_2 );
 				break;
 			case 'meta_in':
-				$args = $this->build_meta_query( $meta_key = $value, $meta_value = $arg_1, 'IN', $format = $arg_2 );
+				// phpcs:ignore
+				$args = $this->build_meta_query( $meta_key = $value, $meta_value = (array) $arg_1, 'IN', $format = $arg_2 );
 				break;
 			case 'meta_not_in':
-				$args = $this->build_meta_query( $meta_key = $value, $meta_value = $arg_1, 'NOT IN', $format = $arg_2 );
+				// phpcs:ignore
+				$args = $this->build_meta_query( $meta_key = $value, $meta_value = (array) $arg_1, 'NOT IN', $format = $arg_2 );
 				break;
 			case 'meta_between':
 				$args = $this->build_meta_query( $meta_key = $value, $meta_value = $arg_1, 'BETWEEN', $format = $arg_2 );
@@ -2001,19 +2002,23 @@ abstract class Tribe__Repository
 				$args = $this->build_tax_query( $taxonomy = $value, $terms = $arg_1, 'term_id', 'NOT EXISTS' );
 				break;
 			case 'term_id_in':
-				$args = $this->build_tax_query( $taxonomy = $value, $terms = $arg_1, 'term_id', 'IN' );
+				// phpcs:ignore
+				$args = $this->build_tax_query( $taxonomy = $value, $terms = (array) $arg_1, 'term_id', 'IN' );
 				break;
 			case 'term_id_not_in':
-				$args = $this->build_tax_query( $taxonomy = $value, $terms = $arg_1, 'term_id', 'NOT IN' );
+				// phpcs:ignore
+				$args = $this->build_tax_query( $taxonomy = $value, $terms = (array) $arg_1, 'term_id', 'NOT IN' );
 				break;
 			case 'term_id_and':
 				$args = $this->build_tax_query( $taxonomy = $value, $terms = $arg_1, 'term_id', 'AND' );
 				break;
 			case 'term_name_in':
-				$args = $this->build_tax_query( $taxonomy = $value, $terms = $arg_1, 'name', 'IN' );
+				// phpcs:ignore
+				$args = $this->build_tax_query( $taxonomy = $value, $terms = (array) $arg_1, 'name', 'IN' );
 				break;
 			case 'term_name_not_in':
-				$args = $this->build_tax_query( $taxonomy = $value, $terms = $arg_1, 'name', 'NOT IN' );
+				// phpcs:ignore
+				$args = $this->build_tax_query( $taxonomy = $value, $terms = (array) $arg_1, 'name', 'NOT IN' );
 				break;
 			case 'term_name_and':
 				$args = $this->build_tax_query( $taxonomy = $value, $terms = $arg_1, 'name', 'AND' );
@@ -3300,15 +3305,19 @@ abstract class Tribe__Repository
 
 	/**
 	 * {@inheritDoc}
+	 *
+	 * @since 6.12.0 Made $query explicitly nullable.
 	 */
-	public function hash( array $settings = [], WP_Query $query = null ) {
+	public function hash( array $settings = [], ?WP_Query $query = null ) {
 		return md5( json_encode( $this->get_hash_data( $settings, $query ) ) );
 	}
 
 	/**
 	 * {@inheritDoc}
+	 *
+	 * @since 6.12.0 Made $query explicitly nullable.
 	 */
-	public function get_hash_data( array $settings, WP_Query $query = null ) {
+	public function get_hash_data( array $settings, ?WP_Query $query = null ) {
 		$filters    = $this->current_filters;
 		$query_vars = null !== $query
 			? $query->query
@@ -3648,6 +3657,7 @@ abstract class Tribe__Repository
 			}
 
 			$intersection = count( $all_matching_term_ids ) > 1
+				// phpcs:ignore PHPCompatibility.FunctionUse.RequiredToOptionalFunctionParameters.array_intersect_arraysMissing -- Arguments supplied via spread unpacking; false positive.
 				? array_intersect( ...$all_matching_term_ids )
 				: reset( $all_matching_term_ids );
 
@@ -3971,8 +3981,10 @@ abstract class Tribe__Repository
 
 	/**
 	 * {@inheritDoc}
+	 *
+	 * @since 6.12.0 Made $context explicitly nullable.
 	 */
-	public function set_request_context( string $context = null ): self {
+	public function set_request_context( ?string $context = null ): self {
 		$this->request_context = $context;
 
 		return $this;

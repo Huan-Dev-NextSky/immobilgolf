@@ -95,10 +95,10 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 			if(empty($tableName))
 				UniteFunctionsUC::throwError("Empty table name!!!");
-			
-			$sql = "show tables like '$tableName'";
-			
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+
+			$sql = $wpdb->prepare("SHOW TABLES LIKE %s", $tableName);
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Schema check. WordPress has no API for SHOW TABLES. The table name is a %s placeholder.
 			$table = $wpdb->get_var($sql);
 
 			if($table == $tableName)
@@ -134,6 +134,33 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 			return $placeholders;
 		}
+		
+		/**
+		 * sanitize and validate post types
+		 */
+		public static function sanitizePostTypes($postTypes, $arrFallback = array("post")){
+			
+			if(is_array($postTypes) == false)
+				$postTypes = array($postTypes);
+			
+			$arrPostTypes = array();
+			foreach($postTypes as $postType){
+				$postType = sanitize_key($postType);
+				if(empty($postType))
+					continue;
+				
+				if(post_type_exists($postType) == false)
+					continue;
+				
+				$arrPostTypes[] = $postType;
+			}
+			
+			$arrPostTypes = array_unique($arrPostTypes);
+			if(empty($arrPostTypes))
+				$arrPostTypes = $arrFallback;
+			
+			return($arrPostTypes);
+		}
 
 		/**
 		 * process the transaction
@@ -143,15 +170,15 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			global $wpdb;
 
 			try{
-				$wpdb->query("START TRANSACTION");
+				$wpdb->query("START TRANSACTION"); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control. Caching does not apply.
 
 				$result = $callback();
 
-				$wpdb->query("COMMIT");
+				$wpdb->query("COMMIT"); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control. Caching does not apply.
 
 				return $result;
 			}catch(Exception $e){
-				$wpdb->query("ROLLBACK");
+				$wpdb->query("ROLLBACK"); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control. Caching does not apply.
 
 				throw $e;
 			}
@@ -211,7 +238,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			
 			return($title);
 		}
-
+		
 
 		/**
 		 *
@@ -889,7 +916,31 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 			return(null);
 		}
+		
+		/**
+		 * get first post term name by taxonomy
+		 */
+		public static function getPostTerm_firstTermName($postID, $taxName){
+			
+			if(empty($taxName))
+				$taxName = "category";
+			
+			$arrTerms = wp_get_post_terms($postID, $taxName);
 
+			if(empty($arrTerms))
+				return(null);
+
+			foreach($arrTerms as $term){
+
+				$slug = $term->name;
+				
+				return($slug);
+			}
+
+			return("");
+		}
+		
+		
 		/**
 		 * get post terms title string
 		 */
@@ -1661,7 +1712,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 				$arr[self::SORTBY_SALES] = __("Number of Sales (WooCommerce)", "unlimited-elements-for-elementor");
 				$arr[self::SORTBY_RATING] = __("Rating (WooCommerce)", "unlimited-elements-for-elementor");
 			}
-
+			
 			$arr[self::SORTBY_SLUG] = __("Slug", "unlimited-elements-for-elementor");
 			$arr[self::SORTBY_AUTHOR] = __("Author", "unlimited-elements-for-elementor");
 			$arr[self::SORTBY_LAST_MODIFIED] = __("Last Modified", "unlimited-elements-for-elementor");
@@ -1670,7 +1721,10 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			$arr[self::SORTBY_NONE] = __("Unsorted", "unlimited-elements-for-elementor");
 			$arr[self::SORTBY_MENU_ORDER] = __("Menu Order", "unlimited-elements-for-elementor");
 			$arr[self::SORTBY_PARENT] = __("Parent Post", "unlimited-elements-for-elementor");
-
+			
+			if(UniteCreatorPluginIntegrations::isWPPopularPostsExists() === true)
+				$arr["popular_wpp"] = __("Popular Posts", "unlimited-elements-for-elementor");
+			
 			if($forFilter !== true){
 				
 				$arr["post__in"] = __("Preserve Posts In Order", "unlimited-elements-for-elementor");
@@ -1678,7 +1732,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 				$arr[self::SORTBY_META_VALUE] = __("Meta Field Value", "unlimited-elements-for-elementor");
 				$arr[self::SORTBY_META_VALUE_NUM] = __("Meta Field Value (numeric)", "unlimited-elements-for-elementor");
 			}
-
+	
 			return($arr);
 		}
 
@@ -2321,15 +2375,26 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		$arrQuery = $wp_query->query;
 		$titleFilter = UniteFunctionsUC::getVal($arrQuery, "title_filter");
 
-		if(!empty($titleFilter)){
-			if(!empty($where))
-				$where .= " AND";
-
-			$where .= " wp_posts.post_title like '%$titleFilter%'";
+		if ( ! is_string( $titleFilter ) ) {
+			return $where;
 		}
+		
+		$titleFilter = UniteFunctionsUC::sanitize( $titleFilter, UniteFunctionsUC::SANITIZE_SQL_INJECTS );
+		
+		if ( $titleFilter !== '' ) {
+			if ( ! empty( $where ) ) {
+				$where .= ' AND';
+			}
 
+			// esc_like: % _ \ are literal in LIKE; prepare: value is bound (no SQL injection).
+			$like = '%' . $wpdb->esc_like( $titleFilter ) . '%';
+			$where .= $wpdb->prepare( " {$wpdb->posts}.post_title LIKE %s", $like );
+		}
+		
+		
 		return ($where);
 	}
+	
 
 	/**
 	 *
@@ -2651,7 +2716,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			$args["orderby"] = $orderby;
 
 		if($orderby == self::SORTBY_META_VALUE || $orderby == self::SORTBY_META_VALUE_NUM)
-			$args["meta_key"] = UniteFunctionsUC::getVal($filters, "meta_key");
+			$args["meta_key"] = UniteFunctionsUC::getVal($filters, "orderby_meta_key");
 
 		$isProduct = ($postType == "product");
 
@@ -2860,6 +2925,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			$content = $post->post_content;
 
 		if(GlobalsProviderUC::$disablePostContentFiltering !== true)
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External hook from WordPress or another plugin.
 			$content = apply_filters("widget_text_content", $content);
 
 		self::$cachePostContent[$postID] = $content;
@@ -3289,7 +3355,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 		if($isWPML)
 			$thumbID = UniteCreatorWpmlIntegrate::getTranslatedAttachmentID($thumbID);
-
+		
 		$arrImage = wp_get_attachment_image_src($thumbID, $size);
 		if(empty($arrImage))
 			return (false);
@@ -3601,6 +3667,9 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 	 */
 	public static function isCurrentUserHasPermissions(){
 		
+		if (!function_exists('wp_get_current_user'))
+			return false;
+
 		if(function_exists("current_user_can") == false)
 			return(false);
 		
@@ -3820,6 +3889,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 				$arrData = $arrData + $arrMeta;
 		}
 		
+		$arrData = apply_filters("uelm_get_user_data", $arrData);
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 		$arrData = apply_filters("unlimited_elements_get_user_data", $arrData);
 
 		return ($arrData);
@@ -3856,6 +3927,29 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 	}
 
 	/**
+	 * get user names from list of user objects for debug
+	 * returns array of formatted strings: "Display Name (ID: X, Login: Y)"
+	 */
+	public static function getUsersNamesShort($arrUsers){
+		
+		if(empty($arrUsers))
+			return(array());
+		
+		$arrUserNames = array();
+		
+		foreach($arrUsers as $user){
+			
+			$userName = $user->display_name;
+			$userID = $user->ID;
+			$userLogin = $user->user_login;
+			
+			$arrUserNames[] = "$userName (ID: $userID, Login: $userLogin)";
+		}
+		
+		return($arrUserNames);
+	}
+
+	/**
 	 * get roles as name/value array
 	 */
 	public static function getRolesShort($addAll = false){
@@ -3872,15 +3966,6 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		return ($arrShort);
 	}
 
-	/**
-	 * get all admin users
-	 */
-	public static function getAdminUsers(){
-		
-		$arrAdminUsers = get_users( array( 'role' => 'Administrator' ) );
-		
-		return($arrAdminUsers);
-	}
 	
 	/**
 	 * get users array short
@@ -3896,9 +3981,11 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 			return (self::$cacheAuthorsShort);
 		}
-
-		$args = array("role__not_in" => array("subscriber", "customer"));
-
+		
+		$args = array(
+			"role__in" => array("administrator", "editor", "author"),
+			"number"   => 200
+		);
 		$arrUsers = get_users($args);
 
 		$arrUsersShort = array();
@@ -4090,6 +4177,83 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 		return ($argsNew);
 	}
+	
+	/**
+	 * Expand tax_query terms for debug output (avoid fatals if missing).
+	 * Adds readable info (name/slug) alongside numeric term IDs.
+	 */
+	public static function expandTaxQueryTermsForDebug($args){
+		
+		if(empty($args) || is_array($args) == false)
+			return($args);
+		
+		$taxQuery = UniteFunctionsUC::getVal($args, "tax_query");
+		if(empty($taxQuery) || is_array($taxQuery) == false)
+			return($args);
+		
+		foreach($taxQuery as $index => $clause){
+			
+			if(is_array($clause) == false)
+				continue;
+			
+			$terms = UniteFunctionsUC::getVal($clause, "terms");
+			if(empty($terms) || is_array($terms) == false)
+				continue;
+			
+			$taxonomy = UniteFunctionsUC::getVal($clause, "taxonomy");
+			if(empty($taxonomy))
+				continue;
+			
+			$field = UniteFunctionsUC::getVal($clause, "field");
+			if(empty($field))
+				$field = "term_id";
+			
+			//expand only numeric IDs
+			if($field !== "term_id" && $field !== "id")
+				continue;
+			
+			$arrExpanded = array();
+			foreach($terms as $termID){
+				
+				if(is_numeric($termID) == false){
+					$arrExpanded[] = $termID;
+					continue;
+				}
+				
+				$termID = (int)$termID;
+				$objTerm = get_term($termID, $taxonomy);
+				if(empty($objTerm) || is_wp_error($objTerm)){
+					$arrExpanded[] = $termID;
+					continue;
+				}
+				
+				$slug = UniteFunctionsUC::getVal($objTerm, "slug");
+				$name = UniteFunctionsUC::getVal($objTerm, "name");
+				
+				$str = $termID;
+				if(!empty($slug) || !empty($name)){
+					$str .= " (";
+					if(!empty($slug))
+						$str .= "slug:{$slug}";
+					if(!empty($name)){
+						if(!empty($slug))
+							$str .= ", ";
+						$str .= "name:{$name}";
+					}
+					$str .= ")";
+				}
+				
+				$arrExpanded[] = $str;
+			}
+			
+			$clause["terms"] = $arrExpanded;
+			$taxQuery[$index] = $clause;
+		}
+		
+		$args["tax_query"] = $taxQuery;
+		
+		return($args);
+	}
 
 	/**
 	 * print current query
@@ -4106,7 +4270,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		$queryVars = self::cleanQueryArgsForDebug($queryVars);
 
 		dmp("Current Query Is: ");
-		dmp($queryVars);
+		dmpHtml($queryVars);
 	}
 
 	/**
@@ -4274,41 +4438,139 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 				
 		}
 		
+		/**
+		 * check if include belongs to this plugin
+		 */
+		private static function isOwnPluginInclude($src){
+			
+			if(empty($src) || is_string($src) == false)
+				return(false);
+			
+			if(strpos($src, GlobalsUC::$urlPlugin) !== false)
+				return(true);
+			
+			$pathPluginRel = GlobalsUC::$pathPluginRel;
+			
+			if(!empty($pathPluginRel) && strpos($src, "/".$pathPluginRel) !== false)
+				return(true);
+			
+			return(false);
+		}
+		
 		
 		/**
 		 *
 		 * unregister styles and scripts after all includes formed
 		 */
 		public static function onStylesAndScriptsDeregister(){
-						
+		
+			$showDebug = false;
+
 			if(empty(self::$toDeregisterScripts) && empty(self::$toDeregisterStyles))
 				return(false);
 			
 			global $wp_scripts, $wp_styles;
 			
+			if($showDebug == true){
+				
+				dmp("---- Deregister Styles and Scripts ----");
+				
+				dmp("Scripts to deregister:");
+				dmp(array_keys(self::$toDeregisterScripts));
+				
+				dmp("Styles to deregister:");
+				dmp(array_keys(self::$toDeregisterStyles));
+			}
+			
+			$arrDeregisteredScripts = array();
+			$arrDeregisteredStyles = array();
+			$arrSkippedScripts = array();
+			$arrSkippedStyles = array();
+			
 			// scripts
 			foreach(self::$toDeregisterScripts as $filename=>$nothing) {
-				
+			
+				$found = false;
+				$skipped = false;
+			
 				foreach ($wp_scripts->registered as $handle => $script) {
 					
-					if($handle == $filename || strpos($script->src, $filename))
+					if($handle == $filename || strpos($script->src, $filename)){
+						
+						if(self::isOwnPluginInclude($script->src) == true){
+							
+							$skipped = true;
+							
+							if($showDebug == true)
+								$arrSkippedScripts[] = "$handle | ".$script->src." | search: $filename";
+							
+							continue;
+						}
+						
+						$found = true;
+						
+						if($showDebug == true)
+							$arrDeregisteredScripts[] = "$handle | ".$script->src." | search: $filename";
+						
 						wp_deregister_script( $handle );
+					}
 				
 				}
 				
+				if($showDebug == true && $found == false && $skipped == false)
+					dmp("script not found: $filename");
+				
 			}
-			
 			
 			// styles
 			foreach(self::$toDeregisterStyles as $filename=>$nothing) {
 				
-				foreach ($wp_scripts->registered as $handle => $style) {
+				$found = false;
+				$skipped = false;
+				
+				foreach ($wp_styles->registered as $handle => $style) {
 					
-					if($handle == $filename || strpos($style->src, $filename))
+					if($handle == $filename || strpos($style->src, $filename)){
+						
+						if(self::isOwnPluginInclude($style->src) == true){
+							
+							$skipped = true;
+							
+							if($showDebug == true)
+								$arrSkippedStyles[] = "$handle | ".$style->src." | search: $filename";
+							
+							continue;
+						}
+						
+						$found = true;
+						
+						if($showDebug == true)
+							$arrDeregisteredStyles[] = "$handle | ".$style->src." | search: $filename";
+						
 						wp_deregister_style( $handle );
+					}
 				}
+				
+				if($showDebug == true && $found == false && $skipped == false)
+					dmp("style not found: $filename");
 			}
 			
+			if($showDebug == true){
+				
+				dmp("Skipped plugin scripts:");
+				dmp($arrSkippedScripts);
+				
+				dmp("Skipped plugin styles:");
+				dmp($arrSkippedStyles);
+				
+				dmp("Deregistered scripts:");
+				dmp($arrDeregisteredScripts);
+				
+				dmp("Deregistered styles:");
+				dmp($arrDeregisteredStyles);
+				exit();
+			}
+
 		}
 	
 	
@@ -4391,9 +4653,9 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		if (empty($script) || !is_string($script)) {
 			return;
 		}
-	
+		
 		// Register and enqueue dummy script
-		wp_register_script($handle, '', array(), null, true);
+		wp_register_script($handle, '', ["jquery"], null, true);
 		wp_add_inline_script($handle, $script);
 		wp_enqueue_script($handle);
 	
@@ -4639,7 +4901,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			$postType
 		);
 		
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared		
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Title lookup on wp_posts. Query is prepared above.
 		$response = $wpdb->get_var($sql);
 		
 		$isExists = (bool)$response;
@@ -4830,6 +5092,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 			if(defined($tag))
 				continue;
 
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.VariableConstantNameFound -- Cache plugin constants: DONOTCACHEPAGE, DONOTCACHEDB, DONOTMINIFY, DONOTCDN.
 			define($tag, true);
 		}
 
@@ -4874,6 +5137,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 	public static function onFrontInit(){
 		
 		add_action('wp_print_scripts', array('UniteFunctionsWPUC', 'onStylesAndScriptsDeregister'), PHP_INT_MAX);
+
+        add_action('wp_after_insert_post', function ($post_id, $post, $update) { GlobalsUC::$hideDebug = true; }, 10, 3);
 		
 	}
 	

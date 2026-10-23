@@ -364,7 +364,7 @@ class UniteCreatorExporter extends UniteCreatorExporterBase{
 				case 'png':
 					break;
 				default:
-					unlink($pathAssetsDest . $file);
+					wp_delete_file($pathAssetsDest . $file);
 				}
 			}	
 		break;
@@ -378,7 +378,7 @@ class UniteCreatorExporter extends UniteCreatorExporterBase{
 					case 'svg':
 					case 'gif':
 					case 'png':
-						unlink($pathAssetsDest . $file);
+						wp_delete_file($pathAssetsDest . $file);
 					break;
 				}
 			}		
@@ -392,7 +392,7 @@ class UniteCreatorExporter extends UniteCreatorExporterBase{
 	 * make export zip file
 	 */
 	private function makeExportZipFile(){
-
+		
 		$zip = new UniteZipUC();
 		$zip->makeZip($this->pathExportAddon, $this->filepathAddonZip);
 
@@ -521,8 +521,9 @@ class UniteCreatorExporter extends UniteCreatorExporterBase{
 			$this->copyAssets();
 
 			$this->makeExportZipFile();
+			
 			$this->deleteExportAddonFolder();
-
+		
 			if(!empty($moveFolder)){
 				$this->moveExportZipToFolder($moveFolder, $createCategoryFolders);
 				$this->deleteExportAddonFolder();
@@ -1071,6 +1072,8 @@ class UniteCreatorExporter extends UniteCreatorExporterBase{
 			}
 		}
 
+		$arrImport = apply_filters("uelm_uc_modify_addon_data_before_import", $arrImport);
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 		$arrImport = apply_filters("uc_modify_addon_data_before_import", $arrImport);
 
 		//check if addon type match
@@ -1138,7 +1141,7 @@ class UniteCreatorExporter extends UniteCreatorExporterBase{
 			//make the last imported addons list
 			self::$arrImportedAddons[$addonName] = true;
 		}else
-			$textLog .= " overwrited";
+			$textLog .= " overwritten";
 
 		$this->addLog($textLog);
 

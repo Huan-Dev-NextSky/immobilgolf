@@ -19,12 +19,24 @@ class UniteFunctionsUC{
 	const SANITIZE_VIMEO = "sanitize_vimeo";
 	const SANITIZE_WISTIA = "sanitize_wistia";
 	const SANITIZE_URL = "sanitize_url";
+	const SANITIZE_URL_TRAVERSE = "sanitize_url_traverse";
 	const SANITIZE_ATTR = "sanitize_attr";
 	const SANITIZE_HTML = "sanitize_html";
+	const SANITIZE_SQL_INJECTS = "SQL_INJECTS";
 	
 	
 	private static $serial = 0;
 	private static $arrCache = array();
+	private static $requestInputReader = null;
+
+	/**
+	 * Tests pass a reader so a filter_input() value can be checked on servers
+	 * where filter_input() cannot see values written into $_POST later.
+	 */
+	public static function setRequestInputReaderForTests($reader){
+
+		self::$requestInputReader = $reader;
+	}
 
 	/**
 	 * throw error
@@ -34,6 +46,7 @@ class UniteFunctionsUC{
 		if($code === null)
 			$code = 0;
 		
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Printed later as escaped HTML, or returned as JSON.
 		throw new Exception($message, (int)$code);
 	}
 
@@ -73,7 +86,7 @@ class UniteFunctionsUC{
 		try{
 			throw new Exception("Show me the trace");
 		}catch(Exception $e){
-
+			
 			$trace = $e->getTraceAsString();
 			dmp($trace);
 
@@ -93,20 +106,54 @@ class UniteFunctionsUC{
 	}
 
 	/**
+	 * Read a request variable via filter_input, with a superglobal fallback.
+	 *
+	 * filter_input() reads the raw request, so WordPress slashes are not applied
+	 * and the value must not be unslashed. It often returns null on CGI/FastCGI
+	 * and XAMPP even when $_POST or $_GET is set. Only that fallback is unslashed.
+	 */
+	private static function readFilteredInput($name, $inputType){
+
+		if(self::$requestInputReader !== null)
+			$value = call_user_func(self::$requestInputReader, $inputType, $name);
+		else
+			$value = filter_input($inputType, $name, FILTER_DEFAULT);
+
+		if($value !== null && $value !== false)
+			return($value);
+
+		// filter_input() fallback (XAMPP/CGI). Callers sanitize via sanitizeVar(), which includes types that must stay raw.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Generic field reader. Callers verify the nonce after reading it through this function.
+		if($inputType === INPUT_POST && isset($_POST[$name])) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Missing -- Sanitized by sanitizeVar() with the caller's type. Callers verify the nonce.
+			return wp_unslash($_POST[$name]);
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Generic field reader. Callers verify the nonce after reading it through this function.
+		if($inputType === INPUT_GET && isset($_GET[$name])) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Recommended -- Sanitized by sanitizeVar() with the caller's type. Callers verify the nonce.
+			return wp_unslash($_GET[$name]);
+		}
+
+		return null;
+	}
+
+	/**
 	 * get post or get variable
 	 */
 	public static function getPostGetVariable($name, $initVar = "", $sanitizeType = ""){
 
-		$var = $initVar;
+		$var = self::readFilteredInput($name, INPUT_POST);
 
-		if(isset($_POST[$name]))
-			$var = $_POST[$name];
-		elseif(isset($_GET[$name]))
-			$var = $_GET[$name];
+		if($var === null)
+			$var = self::readFilteredInput($name, INPUT_GET);
+
+		if($var === null)
+			$var = $initVar;
 
 		$var = UniteProviderFunctionsUC::sanitizeVar($var, $sanitizeType);
 
-		return ($var);
+		return($var);
 	}
 
 	/**
@@ -114,14 +161,14 @@ class UniteFunctionsUC{
 	 */
 	public static function getPostVariable($name, $initVar = "", $sanitizeType = ""){
 
-		$var = $initVar;
+		$var = self::readFilteredInput($name, INPUT_POST);
 
-		if(isset($_POST[$name]))
-			$var = $_POST[$name];
+		if($var === null)
+			$var = $initVar;
 
 		$var = UniteProviderFunctionsUC::sanitizeVar($var, $sanitizeType);
 
-		return ($var);
+		return($var);
 	}
 
 	/**
@@ -129,14 +176,14 @@ class UniteFunctionsUC{
 	 */
 	public static function getGetVar($name, $initVar = "", $sanitizeType = ""){
 
-		$var = $initVar;
+		$var = self::readFilteredInput($name, INPUT_GET);
 
-		if(isset($_GET[$name]))
-			$var = $_GET[$name];
+		if($var === null)
+			$var = $initVar;
 
 		$var = UniteProviderFunctionsUC::sanitizeVar($var, $sanitizeType);
 
-		return ($var);
+		return($var);
 	}
 
 	/**
@@ -146,8 +193,11 @@ class UniteFunctionsUC{
 
 		$files = array();
 
-		if(isset($_FILES[$name]))
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Generic upload reader. Callers verify the nonce before using the file.
+		if(isset($_FILES[$name])) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Missing -- Upload array. tmp_name is a PHP path; callers validate with wp_check_filetype_and_ext(). Callers verify the nonce.
 			$files = $_FILES[$name];
+		}
 
 		$keys = array(
 			"name",
@@ -190,6 +240,20 @@ class UniteFunctionsUC{
 			return($arr[$key]);
 
 		return($altVal);
+	}
+
+	/**
+	 * get scalar string, reject arrays and objects
+	 */
+	public static function getScalarString($val, $fieldName = "value"){
+
+		if(is_array($val) || is_object($val))
+			self::throwError("Wrong ".$fieldName);
+
+		if($val === null)
+			return("");
+
+		return((string)$val);
 	}
 
 
@@ -797,9 +861,11 @@ class UniteFunctionsUC{
 	/**
 	 * Modify data array for show - for DEBUG purposes
 	 * Convert single arrays like in post meta (multi-level support)
+	 * fordebug for debug debug array debug
 	 */
 	public static function modifyDataArrayForShow($arrData, $convertSingleArray = false) {
-	    // Check if input is not an array
+
+		// Check if input is not an array
 	    if (!is_array($arrData)) {
 	        return $arrData;
 	    }
@@ -819,8 +885,10 @@ class UniteFunctionsUC{
 	            $value = UniteFunctionsUC::truncateString($value, $truncateSize);
 	        }
 	        
-	        if(is_string($value))
+	        if(is_string($value)){
 	        	$value = htmlspecialchars($value);
+	        	
+	        }
 	        
 	        // If the value is an array, process it recursively
 	        if (is_array($value)) {
@@ -989,6 +1057,13 @@ class UniteFunctionsUC{
 	public static function z_____________STRINGS_____________(){}
 	
 	/**
+	 * Remove http:// or https:// from a string
+	 */
+	public static function removeHttpHttps($str){
+		return preg_replace('#^https?://#i', '', $str);
+	}
+	
+	/**
 	 * comma sparated to array
 	 */
 	public static function csvToArray($strCsv){
@@ -1129,6 +1204,36 @@ class UniteFunctionsUC{
 				
 	}
 	
+	/**
+	 * normalize content for text output
+	 */
+	public static function normalizeContentForText( $content ) {
+	
+	    $allowed_tags = array(
+	        'br'     => array(),
+	        'p'      => array(),
+	        'strong' => array(),
+	        'b'      => array(),
+	        'em'     => array(),
+	        'i'      => array(),
+	        'u'      => array(),
+	        'span'   => array(
+	            'style' => array(),
+	            'class' => array(),
+	        ),
+	        'ul'     => array(),
+	        'ol'     => array(),
+	        'li'     => array(),
+	        'a'      => array(
+	            'href'  => array(),
+	            'title' => array(),
+	            'rel'   => array(),
+	            'target'=> array(),
+	        ),
+	    );
+	
+	    return wp_kses( $content, $allowed_tags );
+	}
 	
 	/**
 	 * truncate string
@@ -1141,8 +1246,8 @@ class UniteFunctionsUC{
 			$length = 100;
 					
 		$originalValue = $value;
-				
-		$value = wp_strip_all_tags($value,"<br><em><b><strong>");
+		
+		$value = self::normalizeContentForText($value);
 		
 		$stringLen = mb_strlen($value, $charset);
 		
@@ -1284,7 +1389,16 @@ class UniteFunctionsUC{
 		if(is_array($str))
 			return($str);
 
-		$arrOutput = @unserialize($str);
+		if(is_string($str) == false)
+			return(array());
+
+		$str = trim($str);
+
+		// Array-only contract: do not pass object payloads (O:/C:/E:) to unserialize().
+		if(preg_match("/^a:[0-9]+:\{/", $str) !== 1)
+			return(array());
+
+		$arrOutput = @unserialize($str, array("allowed_classes" => false));
 
 		if(empty($arrOutput))
 			return(array());
@@ -1317,6 +1431,7 @@ class UniteFunctionsUC{
 		$arrSanitize[self::SANITIZE_KEY] = __("Sanitize KEY", "unlimited-elements-for-elementor");
 		$arrSanitize[self::SANITIZE_TEXT_FIELD] = __("Sanitize Text Field", "unlimited-elements-for-elementor");
 		$arrSanitize[self::SANITIZE_NOTHING] = __("No Sanitize (not recomended)", "unlimited-elements-for-elementor");
+		$arrSanitize[self::SANITIZE_SQL_INJECTS] = __("Sanitize SQL injects (title search)", "unlimited-elements-for-elementor");
 
 		return($arrSanitize);
 	}
@@ -1514,9 +1629,69 @@ class UniteFunctionsUC{
 
 		if(strpos($path,"?") !== false)
 			$path = strtok($path, '?');
-		
+
+		$path = self::collapsePathSegments($path, $ds);
 		
 		return $path;
+	}
+
+	/**
+	 * collapse "." and ".." so a joined path cannot hide a parent-directory segment
+	 */
+	private static function collapsePathSegments($path, $ds){
+
+		if($path === '' || $path === $ds)
+			return($path);
+
+		$hasTrailingSeparator = (substr($path, -1) === $ds);
+		$isUnc = ($ds === '\\' && strlen($path) >= 2 && $path[0] === '\\' && $path[1] === '\\');
+
+		$parts = explode($ds, $path);
+		$drive = '';
+		$isAbsolute = false;
+
+		if($isUnc == true){
+			$isAbsolute = true;
+		}elseif(isset($parts[0]) && preg_match('/^[a-zA-Z]:$/', $parts[0])){
+			$drive = array_shift($parts);
+			$isAbsolute = true;
+		}elseif(isset($parts[0]) && $parts[0] === ''){
+			$isAbsolute = true;
+		}
+
+		$stack = array();
+
+		foreach($parts as $part){
+
+			if($part === '' || $part === '.')
+				continue;
+
+			if($part === '..'){
+
+				if(!empty($stack))
+					array_pop($stack);
+				elseif($isAbsolute == false && $drive === '')
+					$stack[] = '..';
+
+				continue;
+			}
+
+			$stack[] = $part;
+		}
+
+		$collapsed = implode($ds, $stack);
+
+		if($drive !== '')
+			$collapsed = $drive.($collapsed === '' ? '' : $ds.$collapsed);
+		elseif($isUnc == true)
+			$collapsed = "\\\\".$collapsed;
+		elseif($isAbsolute == true)
+			$collapsed = $ds.$collapsed;
+
+		if($hasTrailingSeparator == true && $collapsed !== '' && substr($collapsed, -1) !== $ds)
+			$collapsed .= $ds;
+
+		return($collapsed);
 	}
 
 	/**
@@ -1859,7 +2034,28 @@ class UniteFunctionsUC{
 			
 		return($str);
 	}
-
+	
+	/**
+	 * validate json string
+	 */
+	public static function jsonDecodeValidate($str){
+		
+		if(empty($str))
+			return(array());
+		
+		$arrJSON = self::jsonDecode($str);
+		
+		if(!empty($arrJSON))
+			return($arrJSON);
+				
+		$errorMessage = json_last_error_msg();
+		
+		UniteFunctionsUC::throwError($errorMessage);
+		
+		return($errorMessage);
+	}
+	
+	
 	/**
 	 * maybe json decode
 	 */
@@ -2155,11 +2351,15 @@ class UniteFunctionsUC{
 	 */
 	public static function getBaseUrl($url, $stripPagination = false){
 
-		$arrUrl = parse_url($url);
+		$arrUrl = wp_parse_url($url);
 
 		$scheme = UniteFunctionsUC::getVal($arrUrl, "scheme","http");
 		$host = UniteFunctionsUC::getVal($arrUrl, "host");
 		$path = UniteFunctionsUC::getVal($arrUrl, "path");
+		$port = UniteFunctionsUC::getVal($arrUrl, "port");
+
+		if(!empty($port))
+			$host .= ":".$port;
 
 		$url = "{$scheme}://{$host}{$path}";
 
@@ -2392,6 +2592,7 @@ class UniteFunctionsUC{
 	 * return if the variable is alphanumeric
 	 */
 	public static function isAlphaNumeric($val){
+		
 		$match = preg_match('/^[\w_]+$/', $val);
 
 		if($match == 0)
@@ -2399,7 +2600,69 @@ class UniteFunctionsUC{
 
 		return(true);
 	}
-
+	
+	/**
+	 * check that meta key is valid
+	 */
+	public static function isMetaKeyValid($metaKey){
+		
+		if(is_string($metaKey) == false)
+			return(false);
+			
+		if(empty($metaKey))
+			return(false);
+		
+		 // length limit
+	    if ( strlen( $metaKey ) > 255 )
+	        return false;
+			
+		if ( ! preg_match('/^[A-Za-z0-9_\-]+$/', $metaKey) )
+			return false;
+		
+		return(true);
+	}
+	
+	
+	/**
+	 * check if taxonomy name is valid
+	 */
+	public static function isTaxonomyNameValid($taxonomy){
+		
+	    // must be a string
+	    if ( ! is_string( $taxonomy ) ) {
+	        return false;
+	    }
+	
+	    // not empty
+	    if ( $taxonomy === '' ) {
+	        return false;
+	    }
+	
+	    // max length 32 chars (WordPress internal limit)
+	    if ( strlen( $taxonomy ) > 32 ) {
+	        return false;
+	    }
+	
+	    // must be lowercase only
+	    if ( strtolower( $taxonomy ) !== $taxonomy ) {
+	        return false;
+	    }
+	
+	    // allowed characters: letters, digits, underscore
+	    if ( ! preg_match('/^[a-z0-9_]+$/', $taxonomy) ) {
+	        return false;
+	    }
+	
+	    // cannot start with a number
+	    if ( preg_match('/^[0-9]/', $taxonomy) ) {
+	        return false;
+	    }
+	
+	    return true;
+	}
+	
+	
+	
 	/**
 	 * validate id's list, allowed only numbers and commas
 	 * @param $val
@@ -2579,7 +2842,8 @@ class UniteFunctionsUC{
 
 			return $arrErrors;
 	}
-
+	
+	
 	public static function z________SANITIZE________(){}
 	
 	/**
@@ -2611,11 +2875,17 @@ class UniteFunctionsUC{
 			case self::SANITIZE_URL:
 				$str = self::sanitizeSecuredUrl($str);
 			break;
+			case self::SANITIZE_URL_TRAVERSE:
+				$str = self::sanitizeUrlTraverse($str);
+			break;
 			case self::SANITIZE_ATTR:
 				$str = self::sanitizeSecuredAttribute($str);
 			break;
 			case self::SANITIZE_HTML:
 				$str = self::sanitizeHTMLRemoveJS($str);
+			break;
+			case self::SANITIZE_SQL_INJECTS:
+				$str = self::sanitizeSqlInjects($str);
 			break;
 			default:
 				self::throwError("Sanitize string error: wrong type: $type");
@@ -2626,6 +2896,20 @@ class UniteFunctionsUC{
 			dmp("sanitize output: $str");
 		
 		return($str);
+	}
+
+	/**
+	 * Strip characters unsuitable for plain title / LIKE search (defense in depth; use with wpdb::prepare).
+	 */
+	public static function sanitizeSqlInjects($str){
+
+		if ( is_string( $str ) == false ) {
+			return '';
+		}
+
+		$stripped = preg_replace( '/[^\p{L}\p{N}\s\'.,&\x{2019}-]+/u', '', $str );
+
+		return is_string( $stripped ) ? trim( $stripped ) : '';
 	}
 
 	/**
@@ -2682,15 +2966,26 @@ class UniteFunctionsUC{
         // Remove all event handlers that start with 'javascript:'
         $html = preg_replace('/\s*on\w+\s*=\s*["\']?\s*javascript\s*:[^"\'>]*["\']?/i', '', $html);
 
-		// Remove all event handlers, even if malformed (e.g., <iframe/onload=...>)
-        $html = preg_replace('/\s*\/?on\w+\s*=\s*["\']?[^"\'>]*["\']?/i', '', $html);
+		// Remove event handlers (incl. chained/malformed: onerror/onload="", onerror/**/=, etc.)
+		$eventHandlerPattern = '/\s+\/?on\w+(?:\s*\/\s*on\w+)*\s*=\s*["\']?[^"\'>]*["\']?/i';		
+		$prevHtml = null;
+		$maxPasses = 10;
+		while($html !== $prevHtml && $maxPasses-- > 0){
+			$prevHtml = $html;
+			$html = preg_replace($eventHandlerPattern, '', $html);
+		}
+
+		// Remove leftover JS call debris from collapsed malformed handlers (e.g. <img src="x"=alert(1)>)
+		$html = preg_replace('/=\s*(?:alert|confirm|prompt|eval)\s*\(\s*[^)]*\s*\)/i', '', $html);
         
         // Remove javascript: URLs in href/src/xlink:href/etc.
         $html = preg_replace('/\s*(href|src|xlink:href)\s*=\s*["\']?\s*javascript\s*:[^"\'>]*["\']?/i', '', $html);
 
         // Remove potentially harmful attributes
-        $html = preg_replace('/\s*(autofocus|formaction|fscommand|seekSegmentTime|xmlns)\s*=\s*["\'][^"\']*["\']?/i', '', $html);
-        
+        $html = preg_replace('/\s*(autofocus|formaction|fscommand|seekSegmentTime|xmlns)\s*=\s*["\'][^"\']*["\']?/i', '', $html);		
+
+		//$html = wp_kses_post( $html );	//harm gallery output, will think later where to put it
+		
         return trim($html);		
 	}
 
@@ -2713,7 +3008,6 @@ class UniteFunctionsUC{
     	return($str);
     }
 	
-    
 	/**
 	 * sanitize color string
 	 */
@@ -2727,6 +3021,49 @@ class UniteFunctionsUC{
 	
 	
 	/**
+	 * Whether the URL string contains a path traversal segment (e.g. ../).
+	 */
+	private static function urlHasPathTraversal($url){
+
+		if(empty($url))
+			return(false);
+
+		$decodedUrl = self::urlDecode($url);
+		$normalized = str_replace('\\', '/', $decodedUrl);
+
+		if(strpos($normalized, '../') !== false)
+			return(true);
+
+		$patterns = array(
+			'/\.\.(?:[\/\\\\]|%2[fF]|%5[cC])/i',
+			'/(?:^|[\/\\\\]|%2[fF]|%5[cC])(?:%2[eE]\.|\.%2[eE]|%2[eE]%2[eE])(?:[\/\\\\]|%2[fF]|%5[cC])/i',
+		);
+
+		foreach($patterns as $pattern){
+			if(preg_match($pattern, $decodedUrl))
+				return(true);
+		}
+
+		return(false);
+	}
+
+
+	/**
+	 * Reject URLs whose path contains traversal (../). Otherwise same as esc_url().
+	 */
+	public static function sanitizeUrlTraverse($url){
+
+		if(empty($url))
+			return($url);
+
+		if(self::urlHasPathTraversal($url))
+			return("");
+
+		return(esc_url($url));
+	}
+
+
+	/**
 	 * Sanitizes a URL by detecting malicious payloads.
 	 * Returns an empty string if the URL contains potential threats.
 	 */
@@ -2734,6 +3071,9 @@ class UniteFunctionsUC{
 		
 		if(empty($url))
 			return($url);
+
+		if(self::urlHasPathTraversal($url))
+			return("");
 	    			
 	    // Trim and decode the URL for better detection
 	    $decodedUrl = self::urlDecode($url);
@@ -2757,7 +3097,167 @@ class UniteFunctionsUC{
 	    }
 	
 	    return esc_url($url);
-	}	
+	}
+
+	/**
+	 * Whether a URL targets this machine or a private/internal network.
+	 * Loopback, RFC1918, link-local (including 169.254.0.0/16), localhost.
+	 *
+	 * @param string $url
+	 * @return bool
+	 */
+	public static function isLocalUrl($url){
+
+		if(empty($url) || is_string($url) == false)
+			return(false);
+
+		$parts = wp_parse_url($url);
+
+		if(empty($parts) || empty($parts["host"]))
+			return(true);
+
+		$scheme = strtolower(self::getVal($parts, "scheme", ""));
+
+		if($scheme !== "http" && $scheme !== "https")
+			return(true);
+
+		$host = strtolower(trim($parts["host"], "[]"));
+		$host = rawurldecode($host);
+
+		if($host === "localhost" || $host === "localhost.localdomain" || $host === "metadata.google.internal")
+			return(true);
+
+		if(self::isNonCanonicalIpHost($host) == true)
+			return(true);
+
+		$ips = self::getUrlHostIps($host);
+
+		if(empty($ips))
+			return(true);
+
+		foreach($ips as $ip){
+			if(self::isLocalIp($ip) == true)
+				return(true);
+		}
+
+		return(false);
+	}
+
+	/**
+	 * Host looks like an IP but is not a canonical dotted IPv4 / IPv6
+	 * (octal 0177.0.0.1, hex 0x7f000001, dword 2130706433, leading zeros).
+	 *
+	 * @param string $host
+	 * @return bool
+	 */
+	private static function isNonCanonicalIpHost($host){
+
+		if(preg_match('/^\d+$/', $host) && strlen($host) >= 8)
+			return(true);
+
+		if(preg_match('/^0x[0-9a-f]+$/i', $host))
+			return(true);
+
+		if(preg_match('/^(?:0x[0-9a-f]+|\d+)(?:\.(?:0x[0-9a-f]+|\d+)){1,3}$/i', $host)){
+
+			if(filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) == false)
+				return(true);
+
+			$parts = explode(".", $host);
+
+			foreach($parts as $part){
+				if(strlen($part) > 1 && $part[0] === "0")
+					return(true);
+			}
+		}
+
+		return(false);
+	}
+
+	/**
+	 * Resolve a host to IPv4/IPv6 addresses.
+	 *
+	 * @param string $host
+	 * @return array
+	 */
+	private static function getUrlHostIps($host){
+
+		$ips = array();
+
+		if(filter_var($host, FILTER_VALIDATE_IP)){
+			$ips[] = $host;
+			return($ips);
+		}
+
+		if(function_exists("dns_get_record")){
+
+			$recordsA = @dns_get_record($host, DNS_A);
+			$recordsAAAA = @dns_get_record($host, DNS_AAAA);
+			$records = array();
+
+			if(is_array($recordsA))
+				$records = array_merge($records, $recordsA);
+
+			if(is_array($recordsAAAA))
+				$records = array_merge($records, $recordsAAAA);
+
+			foreach($records as $record){
+				if(empty($record["ip"]) == false)
+					$ips[] = $record["ip"];
+				if(empty($record["ipv6"]) == false)
+					$ips[] = $record["ipv6"];
+			}
+		}
+
+		if(empty($ips) && function_exists("gethostbynamel")){
+
+			$ipv4 = @gethostbynamel($host);
+
+			if(is_array($ipv4))
+				$ips = array_merge($ips, $ipv4);
+		}
+
+		return array_values(array_unique($ips));
+	}
+
+	/**
+	 * Whether an IP is loopback, private, link-local, or otherwise non-public.
+	 *
+	 * @param string $ip
+	 * @return bool
+	 */
+	private static function isLocalIp($ip){
+	
+		$ip = strtolower(trim($ip, "[]"));
+
+		if(strpos($ip, "::ffff:") === 0){
+			$mapped = substr($ip, 7);
+			if(filter_var($mapped, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4))
+				$ip = $mapped;
+		}
+
+		if(filter_var($ip, FILTER_VALIDATE_IP) == false)
+			return(true);
+
+		if(filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) == false)
+			return(true);
+
+		if(filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)){
+
+			$long = ip2long($ip);
+
+			if($long !== false){
+				if(($long & ip2long("255.192.0.0")) === ip2long("100.64.0.0"))
+					return(true);
+				if(($long & ip2long("255.254.0.0")) === ip2long("198.18.0.0"))
+					return(true);
+				if(($long & ip2long("240.0.0.0")) === ip2long("224.0.0.0"))
+					return(true);
+			}
+		}
+
+		return(false);
+	}
 	
 	public static function z________FILE_SYSTEM________(){}
 
@@ -3007,7 +3507,7 @@ class UniteFunctionsUC{
 	public static function clearDebug($filepath = "debug.txt"){
 		
 		if(file_exists($filepath))
-			unlink($filepath);
+			wp_delete_file($filepath);
 	}
 
 	/**
@@ -3065,7 +3565,7 @@ class UniteFunctionsUC{
 			if(self::isDir($filepath))
 				self::deleteDir($filepath);
 			else
-				unlink($filepath);
+				wp_delete_file($filepath);
 		}
 
 	}
@@ -3114,8 +3614,9 @@ class UniteFunctionsUC{
 				}
 			}
 
-			$deleted = unlink($path);
-			if(!$deleted)
+			wp_delete_file($path);
+
+			if(self::fileExists($path) == true)
 				$arrNotDeleted[] = $path;
 
 			return($arrNotDeleted);
@@ -3280,9 +3781,14 @@ class UniteFunctionsUC{
 	 * check if path under base path
 	 */
 	public static function isPathUnderBase($path, $basePath){
+				
 		$path = self::pathToUnix($path);
 		$basePath = self::pathToUnix($basePath);
-
+		
+		//check path traversal
+		if(strpos($path, '../') !== false)
+			return(false);
+		
 		if(strpos($path, $basePath) === 0)
 			return(true);
 
@@ -3396,13 +3902,20 @@ class UniteFunctionsUC{
 
 	public static function z___________TIME_AND_DATE__________(){}
 
-
+	
 	/**
 	 * get time ago since now
 	 */
 	public static function getTimeAgoString($time_stamp, $textFormat="long"){
 		
-		$time_difference = strtotime('now') - $time_stamp;
+		$now = time();
+		
+		if ( $time_stamp > $now ) {
+					
+			return self::getTimeFromNowString( $time_stamp, $textFormat );
+		}
+		
+		$time_difference = $now - $time_stamp;
 				
 		$textHours = __('hours',"unlimited-elements-for-elementor"); 
 		$textHour = __('hour',"unlimited-elements-for-elementor");
@@ -3424,7 +3937,6 @@ class UniteFunctionsUC{
 			$textMunites = __('min',"unlimited-elements-for-elementor");
 			$textMunite = __('min',"unlimited-elements-for-elementor");
 		}
-		
 		
 		//year
 		if ($time_difference >= 60 * 60 * 24 * 365.242199)
@@ -3456,7 +3968,7 @@ class UniteFunctionsUC{
 	 */
 	private static function getTimeAgoStringUnit($time_stamp, $divisor, $strUnit, $strUnitSingle){
 
-		$time_difference = strtotime("now") - $time_stamp;
+		$time_difference = time() - $time_stamp;
 		$time_units      = floor($time_difference / $divisor);
 
 		settype($time_units, 'string');
@@ -3469,9 +3981,100 @@ class UniteFunctionsUC{
 		else
 			$output = $time_units . " ".$strUnit." ". __("ago","unlimited-elements-for-elementor");
 		
-		$output = apply_filters("ue_modify_time_ago_string", $output);
+		$output = apply_filters("uelm_modify_time_ago_string", $output);
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
+		$output = apply_filters("unlimited_elements_modify_time_ago_string", $output);
 		
 		return($output);
+	}
+
+
+	/**
+	 * Relative time for future timestamps (e.g. scheduled posts): "in 2 hours", not "-120 minutes ago".
+	 */
+	private static function getTimeFromNowString( $time_stamp, $textFormat = "long" ) {
+
+		$time_difference = $time_stamp - time();
+
+		$textHours = __( 'hours', 'unlimited-elements-for-elementor' );
+		$textHour  = __( 'hour', 'unlimited-elements-for-elementor' );
+
+		$textMunites = __( 'minutes', 'unlimited-elements-for-elementor' );
+		$textMunite  = __( 'minute', 'unlimited-elements-for-elementor' );
+
+		$textYears = __( 'years', 'unlimited-elements-for-elementor' );
+		$textYear  = __( 'year', 'unlimited-elements-for-elementor' );
+
+		$textWeeks = __( 'weeks', 'unlimited-elements-for-elementor' );
+		$textWeek  = __( 'week', 'unlimited-elements-for-elementor' );
+
+		if ( $textFormat == 'short' ) {
+
+			$textHours   = __( 'h', 'unlimited-elements-for-elementor' );
+			$textHour    = __( 'h', 'unlimited-elements-for-elementor' );
+			$textMunites = __( 'min', 'unlimited-elements-for-elementor' );
+			$textMunite  = __( 'min', 'unlimited-elements-for-elementor' );
+		}
+
+		if ( $time_difference >= 60 * 60 * 24 * 365.242199 ) {
+			return self::getTimeFromNowStringUnit( $time_stamp, 60 * 60 * 24 * 365.242199, $textYears, $textYear );
+		}
+
+		if ( $time_difference >= 60 * 60 * 24 * 30.4368499 ) {
+			return self::getTimeFromNowStringUnit( $time_stamp, 60 * 60 * 24 * 30.4368499, __( 'months', 'unlimited-elements-for-elementor' ), __( 'month', 'unlimited-elements-for-elementor' ) );
+		}
+
+		if ( $time_difference >= 60 * 60 * 24 * 7 ) {
+			return self::getTimeFromNowStringUnit( $time_stamp, 60 * 60 * 24 * 7, $textWeeks, $textWeek );
+		}
+
+		if ( $time_difference >= 60 * 60 * 24 ) {
+			return self::getTimeFromNowStringUnit( $time_stamp, 60 * 60 * 24, __( 'days', 'unlimited-elements-for-elementor' ), __( 'day', 'unlimited-elements-for-elementor' ) );
+		}
+
+		if ( $time_difference >= 60 * 60 ) {
+			return self::getTimeFromNowStringUnit( $time_stamp, 60 * 60, $textHours, $textHour );
+		}
+
+		return self::getTimeFromNowStringUnit( $time_stamp, 60, $textMunites, $textMunite );
+	}
+
+
+	/**
+	 * Format a future interval as "in N unit(s)".
+	 */
+	private static function getTimeFromNowStringUnit( $time_stamp, $divisor, $strUnit, $strUnitSingle ) {
+
+		$time_difference = $time_stamp - time();
+		$time_units      = floor( $time_difference / $divisor );
+
+		settype( $time_units, 'string' );
+
+		if ( $time_units === '0' ) {
+			$time_units = 1;
+		}
+
+		if ( $time_units == 1 ) {
+			$output = sprintf(
+				/* translators: 1: number (typically 1), 2: time unit singular, e.g. "minute" */
+				__( 'in %1$s %2$s', 'unlimited-elements-for-elementor' ),
+				$time_units,
+				$strUnitSingle
+			);
+		} else {
+			$output = sprintf(
+				/* translators: 1: number, 2: time unit plural, e.g. "minutes" */
+				__( 'in %1$s %2$s', 'unlimited-elements-for-elementor' ),
+				$time_units,
+				$strUnit
+			);
+		}
+
+		$output = apply_filters( 'uelm_modify_time_ago_string', $output );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
+		$output = apply_filters( 'unlimited_elements_modify_time_ago_string', $output );
+
+		return $output;
 	}
 
 
@@ -3714,6 +4317,7 @@ class UniteFunctionsUC{
 		$errorReporting = ini_get("error_reporting");
 
 		if(is_numeric($errorReporting))
+			// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- Hide deprecation notices when that general setting is enabled.
 			ini_set("error_reporting", $errorReporting & ~E_DEPRECATED);
 	}
 
@@ -3978,10 +4582,15 @@ class UniteFunctionsUC{
 	public static function downloadFile($filepath, $filename = null){
 
 		UniteFunctionsUC::validateFilepath($filepath,"export file");
-
+		
 		if(empty($filename))
 			$filename = basename($filepath);
 
+		// Clear all output buffers to prevent any previous output from corrupting the file
+		while (ob_get_level()) {
+			ob_end_clean();
+		}
+ 		
 		header('Content-Description: File Transfer');
 		header('Content-Type: application/octet-stream');
 		header('Content-Disposition: attachment; filename="'.$filename.'"');
@@ -4141,7 +4750,10 @@ class UniteFunctionsUC{
 	 */
 	public static function getUserAgent(){
 
-		return $_SERVER["HTTP_USER_AGENT"];
+		if(isset($_SERVER["HTTP_USER_AGENT"]) === false)
+			return("");
+
+		return sanitize_text_field(wp_unslash($_SERVER["HTTP_USER_AGENT"]));
 	}
 
 	/**
@@ -4151,7 +4763,7 @@ class UniteFunctionsUC{
 	public static function getUserIp(){
 		
 		if(isset($_SERVER["REMOTE_ADDR"]))
-			return($_SERVER["REMOTE_ADDR"]);
+			return sanitize_text_field(wp_unslash($_SERVER["REMOTE_ADDR"]));
 		
 		return("127.0.0.1");  
 	}
@@ -4162,18 +4774,15 @@ class UniteFunctionsUC{
 /*** File System functions ***/
 
 	/**
-	 * move_uploaded_file
-	*/
-	public static function moveUploadedFile($source, $destination) {
-		return move_uploaded_file($source, $destination);
-	}
-
-	/**
 	 * rename 
 	*/
-	public static function move($source, $destination) {
-		
-		return rename($source, $destination);
+	public static function move($source, $destination, $overwrite = false) {
+
+		$filesystem = self::getWPFilesystem();
+		if($filesystem === false)
+			return(false);
+
+		return $filesystem->move($source, $destination, $overwrite);
 	}
 
 	/**
@@ -4216,43 +4825,91 @@ class UniteFunctionsUC{
 	 * is_writable
 	*/
 	public static function isWritable($path) {
-		return is_writable($path);
+
+		$filesystem = self::getWPFilesystem();
+		if($filesystem === false)
+			return(false);
+
+		return $filesystem->is_writable($path);
+	}
+
+	/**
+	 * get the WordPress filesystem instance
+	 */
+	private static function getWPFilesystem(){
+
+		global $wp_filesystem;
+
+		if(function_exists("WP_Filesystem") == false)
+			require_once ABSPATH . "wp-admin/includes/file.php";
+
+		if(empty($wp_filesystem))
+			WP_Filesystem();
+
+		if($wp_filesystem instanceof WP_Filesystem_Base)
+			return($wp_filesystem);
+
+		return(false);
 	}
 
 	/**
 	 * chmod
 	*/
 	public static function chmod($file, $permissions) {
-		return chmod($file, $permissions);
+
+		$filesystem = self::getWPFilesystem();
+		if($filesystem === false)
+			return(false);
+
+		if(self::isFile($file) == false && self::isDir($file) == false)
+			return(false);
+
+		return $filesystem->chmod($file, $permissions);
 	}
 
 	/**
 	 * chown
 	*/
 	public static function chown($file, $owner) {
-		return chown($file, $owner);
+
+		$filesystem = self::getWPFilesystem();
+		if($filesystem === false)
+			return(false);
+
+		if(self::isFile($file) == false && self::isDir($file) == false)
+			return(false);
+
+		return $filesystem->chown($file, $owner);
 	}
 
 	/**
 	 * mkdir
 	*/
 	public static function mkdir($dir) {
-				
-		return mkdir($dir);
-	}
 
-	/**
-	 * readfile
-	*/
-	public static function wp_filesystem_readfile($file) {
-		return readfile($file);
+		$filesystem = self::getWPFilesystem();
+		if($filesystem === false)
+			return(false);
+
+		if(self::isDir($dir) == true)
+			return(false);
+
+		return $filesystem->mkdir($dir);
 	}
 
 	/**
 	 * rmdir
 	*/
 	public static function rmdir($dir) {
-		return rmdir($dir); 
+
+		$filesystem = self::getWPFilesystem();
+		if($filesystem === false)
+			return(false);
+
+		if(self::isDir($dir) == false)
+			return(false);
+
+		return $filesystem->rmdir($dir);
 	}
 	
 	/*** End File System functions ***/
@@ -4260,30 +4917,66 @@ class UniteFunctionsUC{
 	/**
      * HTML-minifyer
     */
-	public static function minifyHTML($html) {
-		// skip <pre>, <code>, <textarea>
-		preg_match_all('#<(pre|code|textarea)\b[^>]*>.*?</\1>#si', $html, $matches);
-		$placeholders = [];
-		foreach ($matches[0] as $i => $block) {
-			$placeholder = "___HTML_BLOCK_" . $i . "___";
-			$placeholders[$placeholder] = $block;
-			$html = str_replace($block, $placeholder, $html);
-		}
+    public static function minifyHTML($html) {
+        if (empty($html)) return $html;
 
-		// minifying
-		$html = preg_replace('/\>[^\S ]+/s', '>', $html);
-		$html = preg_replace('/[^\S ]+\</s', '<', $html);
-		$html = preg_replace('/(\s)+/s', ' ', $html);
-		$html = preg_replace('/[\r\n\t]+/s', '', $html);
-		$html = trim($html);
+        $blocks = [];
 
-		// return textarea
-		foreach ($placeholders as $placeholder => $block) {
-			$html = str_replace($placeholder, $block, $html);
-		}
+        $html = preg_replace_callback('/<(script|style)[^>]*>.*?<\/\\1>/is', function($match) use (&$blocks) {
+            $id = "@@@UELM_BLOCK_" . count($blocks) . "@@@";
+            $blocks[$id] = $match[0];
+            return $id;
+        }, $html);
 
-		return $html;
-	}
-	
+        $html = preg_replace('/\s+/', ' ', $html);
+        
+        $html = str_replace('> <', '><', $html);
+
+        foreach ($blocks as $id => $content) {
+            if (strpos($content, '<script') === 0) {
+                $minified = self::processJS($content);
+            } elseif (strpos($content, '<style') === 0) {
+                $minified = self::processCSS($content);
+            } else {
+                $minified = $content;
+            }
+            
+            $html = str_replace($id, $minified, $html);
+        }
+
+        return trim($html);
+    }
+
+    private static function processJS($scriptTag) {
+		
+        if (preg_match('/^(<script[^>]*>)(.*?)(<\/script>)$/is', $scriptTag, $m)) {
+            $header = $m[1];
+            $code = $m[2];
+            $footer = $m[3];
+
+            if(class_exists("JShrink\\Minifier") == false)
+                return $scriptTag;
+
+            try {
+                $minifiedCode = \JShrink\Minifier::minify($code);
+                return $header . $minifiedCode . $footer;
+            } catch (\Throwable $e) {
+                return $scriptTag;
+            }
+        }
+        return $scriptTag;
+    }
+
+    private static function processCSS($styleTag) {
+        if (preg_match('/^(<style[^>]*>)(.*?)(<\/style>)$/is', $styleTag, $m)) {
+            $css = $m[2];
+            $css = preg_replace('!/\*.*?\*/!s', '', $css); 
+            $css = preg_replace('/\s*([\{\};:,])\s*/', '$1', $css); 
+            $css = str_replace(';}', '}', $css); 
+            $css = preg_replace('/\s+/', ' ', $css);
+            return $m[1] . trim($css) . $m[3];
+        }
+        return $styleTag;
+    }
 
 }

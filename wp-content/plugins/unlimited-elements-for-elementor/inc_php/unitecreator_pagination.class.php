@@ -6,6 +6,8 @@
  * @copyright Copyright (c) 2016 UniteCMS
  * @license http://www.gnu.org/licenses/gpl-2.0.html GNU/GPLv2 or later
 */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 
 //no direct accees
 defined ('UNLIMITED_ELEMENTS_INC') or die ('restricted aceess');
@@ -136,6 +138,8 @@ class UniteCreatorElementorPagination{
 
 			);
 			
+			$arrAjaxSettings = apply_filters("uelm_modify_post_grid_ajax_settings", $arrAjaxSettings, $paramName);
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Legacy hook name kept for existing callbacks.
 			$arrAjaxSettings = apply_filters("ue_modify_post_grid_ajax_settings", $arrAjaxSettings, $paramName);
 			
 			$arrSettings = array_merge($arrSettings, $arrAjaxSettings);
@@ -515,7 +519,7 @@ class UniteCreatorElementorPagination{
 
 		if($isDebug == true){
 			dmp("pagination query:");
-			dmp(GlobalsProviderUC::$lastPostQuery->query);
+			dmpHtml(GlobalsProviderUC::$lastPostQuery->query);
 			
 			$totalPosts = GlobalsProviderUC::$lastPostQuery->found_posts;
 			
@@ -824,7 +828,7 @@ class UniteCreatorElementorPagination{
 					$queryVars = UniteFunctionsWPUC::cleanQueryArgsForDebug($queryVars);
 
 					dmp("Current query vars");
-					dmp($queryVars);
+					dmpHtml($queryVars);
 
 					dmp("max pages: ".$wp_query->max_num_pages);
 

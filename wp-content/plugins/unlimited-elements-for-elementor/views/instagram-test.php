@@ -1,10 +1,11 @@
+<?php if ( ! defined( 'ABSPATH' ) ) exit; ?>
 <h1>Unlimited Elements - Instagram Test</h1>
 
 <br>
 
 <?php
 
-function UnlimitedElementsputInstagramTest(){
+function uelm_putInstagramTest(){
 	
 	$objServices = new UniteServicesUC();
 	
@@ -45,7 +46,7 @@ function UnlimitedElementsputInstagramTest(){
 
 try{
 
-	UnlimitedElementsputInstagramTest();
+	uelm_putInstagramTest();
 	
 }catch(Exception $e){
 	

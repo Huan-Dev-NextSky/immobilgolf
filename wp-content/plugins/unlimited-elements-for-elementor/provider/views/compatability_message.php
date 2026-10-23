@@ -1,6 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) exit;
 
-class UnlimitedAddonsMigraterUC{
+class UELM_AddonsMigrater{
 	
 	private static $arrMenuPages = array();
 	private static $arrSubMenuPages = array();
@@ -229,5 +230,6 @@ class UnlimitedAddonsMigraterUC{
 	
 }
 
-new UnlimitedAddonsMigraterUC();
+new UELM_AddonsMigrater();
 
+class_alias( UELM_AddonsMigrater::class, 'UnlimitedAddonsMigraterUC' );

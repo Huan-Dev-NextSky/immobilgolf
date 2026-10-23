@@ -269,7 +269,7 @@ class SP_Player_List extends SP_Secondary_Post {
 				endif;
 
 				// Add precision to object
-				$stat->precision = sp_array_value( sp_array_value( $meta, 'sp_precision', array() ), 0, 0 ) + 0;
+				$stat->precision = (int) sp_array_value( sp_array_value( $meta, 'sp_precision', array() ), 0, 0 ) + 0;
 
 				// Add column icons to columns were is available
 				if ( get_option( 'sportspress_player_statistics_mode', 'values' ) == 'icons' && ( $stat->post_type == 'sp_performance' || $stat->post_type == 'sp_statistic' ) ) {
@@ -757,7 +757,32 @@ endif;
 				continue;
 			}
 
-			$placeholders[ $player_id ] = array_merge( sp_array_value( $totals, $player_id, array() ), array_filter( sp_array_value( $placeholders, $player_id, array() ) ) );
+			// Sum manual stats with auto-calculated stats
+			$auto_stats   = sp_array_value( $totals, $player_id, array() );
+			$manual_stats = sp_array_value( $placeholders, $player_id, array() );
+			$combined     = array();
+			
+			// Get all unique keys from both arrays
+			$all_keys = array_unique( array_merge( array_keys( $auto_stats ), array_keys( $manual_stats ) ) );
+				
+			foreach ( $all_keys as $key ) {
+
+				// Check if this key refers to an sp_metric.
+				$post      = get_page_by_path( $key, OBJECT, 'sp_metric' );
+				$is_metric = $post && $post->post_type === 'sp_metric';
+				if ( $is_metric ) {
+					$manual_value = $manual_stats[ $key ];
+					
+					$combined[ $key ] = $manual_value;
+				} else {
+					$auto_value   = isset( $auto_stats[ $key ] ) ? floatval( $auto_stats[ $key ] ) : 0;
+					$manual_value = isset( $manual_stats[ $key ] ) ? floatval( $manual_stats[ $key ] ) : 0;
+					
+					// Sum both values
+					$combined[ $key ] = $auto_value + $manual_value;
+				}
+			}
+			$placeholders[ $player_id ] = $combined;
 
 			// Player adjustments
 			$player_adjustments = sp_array_value( $adjustments, $player_id, array() );

@@ -4,7 +4,7 @@
 
 $loader = (static function () {
     // Backup the autoloaded Composer files
-    $existingComposerAutoloadFiles = $GLOBALS['__composer_autoload_files'] ?? [];
+    $existingComposerAutoloadFiles = isset($GLOBALS['__composer_autoload_files']) ? $GLOBALS['__composer_autoload_files'] : [];
 
     $loader = require_once __DIR__.'/autoload.php';
     // Ensure InstalledVersions is available
@@ -29,6 +29,11 @@ if (!function_exists('humbug_phpscoper_expose_class')) {
         }
     }
 }
-humbug_phpscoper_expose_class('ComposerAutoloaderInit2beef32bcbe6958c8d0c584a584660fb', 'InstagramFeed\Vendor\ComposerAutoloaderInit2beef32bcbe6958c8d0c584a584660fb');
+humbug_phpscoper_expose_class('ComposerAutoloaderInitc5372f45acf70f7a7014a9c4e855ac6d', 'InstagramFeed\Vendor\ComposerAutoloaderInitc5372f45acf70f7a7014a9c4e855ac6d');
+
+// Function aliases. For more information see:
+// https://github.com/humbug/php-scoper/blob/master/docs/further-reading.md#function-aliases
+if (!function_exists('sbc_about_us_icon')) { function sbc_about_us_icon() { return \InstagramFeed\Vendor\sbc_about_us_icon(...func_get_args()); } }
+if (!function_exists('sbc_about_us_kses')) { function sbc_about_us_kses() { return \InstagramFeed\Vendor\sbc_about_us_kses(...func_get_args()); } }
 
 return $loader;

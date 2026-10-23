@@ -25,9 +25,11 @@ class UniteProviderCoreAdminUC_Elementor extends UniteProviderAdminUC{
 			"addons_elementor",
 			"licenseelementor",
 			"email-test",
-			"forms-logs",
+			"forms-logs", 
+			"requests-log",	
 			"troubleshooting-overload",
 			"troubleshooting-globals",
+			"troubleshooting-showobjects",
 			"troubleshooting-tables",
 			"troubleshooting-phpinfo",
 			"troubleshooting-memory-usage",
@@ -159,7 +161,7 @@ class UniteProviderCoreAdminUC_Elementor extends UniteProviderAdminUC{
 	 */
 	private function initFeedbackUninstall(){
 
-		$this->objFeedback = new UnlimitedElementsFeedbackUC();
+		$this->objFeedback = new UELM_FeedbackUC();
 		$this->objFeedback->init();
 	}
 
@@ -175,5 +177,6 @@ class UniteProviderCoreAdminUC_Elementor extends UniteProviderAdminUC{
 
 		parent::init();
 	}
+
 
 }

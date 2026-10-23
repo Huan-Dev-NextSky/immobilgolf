@@ -1,0 +1,1 @@
+<a href="{estate_data_printurl}" target="_blank" class="btn btn-primary color-primary btn-property"><?php _l('PrintVersion');?></a>
